@@ -184,4 +184,43 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+/**
+ * DELETE - Xóa yêu cầu đăng ký tạm ngưng (chỉ khi đang chờ duyệt)
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { ids } = body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'Chưa chọn bản ghi nào' }, { status: 400 });
+    }
+
+    const db = await connectToDB();
+    const request = db.request();
+
+    const placeholders = ids.map((id: any, i: number) => {
+      const p = `id${i}`;
+      request.input(p, sql.BigInt, id);
+      return `@${p}`;
+    });
+
+    // Chỉ cho phép xóa các đơn đang ở trạng thái 'Chờ duyệt'
+    const query = `
+      DELETE FROM tbl_dangky_tamngung_kh
+      WHERE ID IN (${placeholders.join(',')})
+      AND Trang_thai_duyet = N'Chờ duyệt'
+    `;
+    const result = await request.query(query);
+
+    return NextResponse.json({
+      success: true,
+      deleted: result.rowsAffected[0],
+    });
+  } catch (e) {
+    console.error('DELETE tam-ngung error:', e);
+    return NextResponse.json({ error: 'DB error', detail: String(e) }, { status: 500 });
+  }
+}
+
 export const dynamic = 'force-dynamic';

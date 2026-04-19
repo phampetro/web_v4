@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Spin, Tag, Select, Button, Modal, message, Typography, Tooltip } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
-import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getCookie } from '../../../../utils/cookie';
 import * as ExcelJS from 'exceljs';
@@ -37,6 +37,7 @@ export default function DuyetTamNgungModule() {
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [approving, setApproving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -159,6 +160,32 @@ export default function DuyetTamNgungModule() {
       },
     });
   };
+  
+  const handleDelete = async () => {
+    Modal.confirm({
+      title: 'Xác nhận xóa yêu cầu',
+      content: `Bạn muốn xóa ${selectedRowKeys.length} yêu cầu đã chọn? Hành động này không thể hoàn tác.`,
+      okText: 'Xóa ngay',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          const res = await fetch('/api/khach-hang/tam-ngung', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: selectedRowKeys }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            message.success(`Đã xóa thành công ${json.deleted} bản ghi!`);
+            setSelectedRowKeys([]);
+            await fetchData();
+          } else message.error(json.error);
+        } catch { message.error('Lỗi kết nối'); } finally { setDeleting(false); }
+      },
+    });
+  };
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -257,8 +284,15 @@ export default function DuyetTamNgungModule() {
 
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
         <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>Tải lại</Button>
-        <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleAction('Đã duyệt')} loading={approving} disabled={selectedRowKeys.length === 0} style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>Duyệt ({selectedRowKeys.length})</Button>
-        <Button danger icon={<CloseCircleOutlined />} onClick={() => handleAction('Từ chối')} loading={approving} disabled={selectedRowKeys.length === 0}>Từ chối ({selectedRowKeys.length})</Button>
+        <Tooltip title={selectedRowKeys.length === 0 ? "Hãy Tick chọn khách hàng cần duyệt" : ""}>
+          <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleAction('Đã duyệt')} loading={approving} disabled={selectedRowKeys.length === 0} style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>Duyệt ({selectedRowKeys.length})</Button>
+        </Tooltip>
+        <Tooltip title={selectedRowKeys.length === 0 ? "Hãy Tick chọn khách hàng cần từ chối" : ""}>
+          <Button danger icon={<CloseCircleOutlined />} onClick={() => handleAction('Từ chối')} loading={approving} disabled={selectedRowKeys.length === 0}>Từ chối ({selectedRowKeys.length})</Button>
+        </Tooltip>
+        <Tooltip title={selectedRowKeys.length === 0 ? "Hãy Tick chọn khách hàng cần xóa" : ""}>
+          <Button danger ghost icon={<DeleteOutlined />} onClick={handleDelete} loading={deleting} disabled={selectedRowKeys.length === 0}>Xóa ({selectedRowKeys.length})</Button>
+        </Tooltip>
       </div>
     </div>
   );

@@ -103,6 +103,52 @@ export function useCachedData<T>({
     }
   }, [apiPath, cacheKey, fetchFromAPI, storeName]);
 
+  const forceReload = useCallback(async () => {
+    setLoading(true);
+    setLoadingText('Đang kiểm tra phiên bản dữ liệu...');
+    try {
+      const { Modal } = await import('antd');
+      let quyenQL = (await getCacheMeta('common_quyen_dl')) || '';
+      if (!quyenQL) {
+        const userInfoStr = localStorage.getItem('user_info');
+        if (userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          quyenQL = userInfo.quyenDL || '';
+        }
+      }
+
+      const res = await fetch(`${apiPath}?quyen_dl=${encodeURIComponent(quyenQL)}&checkOnly=true`);
+      const json = await res.json();
+      const serverNgayUpdate = json.ngayUpdate;
+      const metaNgay = await getCacheMeta(cacheKey);
+
+      const formatDate = (dateStr: string) => {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+      };
+
+      if (serverNgayUpdate === metaNgay && metaNgay) {
+        setLoading(false);
+        Modal.confirm({
+          title: 'Dữ liệu đã mới nhất',
+          content: `Phiên bản hiện tại (${formatDate(metaNgay)}) đã trùng khớp với máy chủ. Bạn có chắc chắn muốn tải lại không?`,
+          okText: 'Tải lại',
+          cancelText: 'Hủy',
+          onOk: () => fetchFromAPI(serverNgayUpdate)
+        });
+      } else {
+        await fetchFromAPI(serverNgayUpdate);
+      }
+    } catch (error) {
+      console.error('Lỗi force reload:', error);
+      message.error('Không thể kiểm tra phiên bản');
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPath, cacheKey, fetchFromAPI]);
+
   useEffect(() => {
     reloadData();
   }, [reloadData]);
@@ -113,6 +159,6 @@ export function useCachedData<T>({
     loading,
     loadingText,
     reloadData,
-    fetchFromAPI
+    forceReload
   };
 }

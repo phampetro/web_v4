@@ -63,7 +63,7 @@ const columns: ColumnsType<KHRecord> = [
 ];
 
 export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate: string, setNgayUpdate?: (d: string) => void }) {
-  const { data, loading, loadingText, reloadData, fetchFromAPI } = useCachedData<KHRecord>({
+  const { data, loading, loadingText, reloadData, forceReload } = useCachedData<KHRecord>({
     storeName: STORE_NAME,
     cacheKey: CACHE_KEY,
     apiPath: '/api/khach-hang/kpsds',
@@ -107,18 +107,7 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
     loadCache();
   }, []);
 
-  const handleReload = async () => {
-    const res = await reloadData();
-    if (res?.isLatest) {
-      Modal.confirm({
-        title: 'Thông báo',
-        content: 'Dữ liệu đang là mới nhất, bạn có muốn tải lại?',
-        okText: 'Đồng ý',
-        cancelText: 'Hủy',
-        onOk: () => fetchFromAPI(res.serverNgayUpdate),
-      });
-    }
-  };
+
 
   const khuVucOptions = useMemo(() => {
     const list = cachedKhuVuc.length > 0 ? cachedKhuVuc : [...new Set(data.map((r) => r.Khu_Vực).filter(Boolean))].sort();
@@ -342,9 +331,7 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Tần suất</div>
           <Select mode="multiple" placeholder="Tất cả" value={selectedTanSuat} onChange={setSelectedTanSuat} allowClear options={tanSuatOptions} style={{ width: '100%' }} maxTagCount="responsive" />
         </div>
-        <div style={{ flex: 1, minWidth: 120, display: 'flex', alignItems: 'flex-end', paddingBottom: 6 }}>
-          <Checkbox checked={showAllKH} onChange={e => setShowAllKH(e.target.checked)} style={{ fontSize: 13 }}>Tất cả KH</Checkbox>
-        </div>
+        <div style={{ flex: 1.2 }}></div>
       </div>
 
       <Spin spinning={loading} description={loadingText}>
@@ -375,7 +362,7 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
       </Spin>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={handleReload} loading={loading}>Tải lại</Button>
+        <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
         <Button icon={<DownloadOutlined />} onClick={() => exportExcel(filteredData)} disabled={filteredData.length === 0} loading={exporting}>Xuất Excel</Button>
         <Button icon={<PauseCircleOutlined />} onClick={() => selectedRowKeys.length ? setTamNgungModalOpen(true) : message.warning('Hãy Tick chọn khách hàng cần tạm ngưng')} danger={selectedRowKeys.length > 0}>Tạm ngưng ({selectedRowKeys.length})</Button>
         <Button icon={<CameraOutlined />} onClick={captureTable} loading={capturing} disabled={filteredData.length === 0}>Chụp ảnh</Button>
@@ -399,26 +386,113 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
             Xuất Excel (Chọn)
           </Button>,
           <Button key="submit" type="primary" icon={<SendOutlined />} loading={submittingApproval} style={{ backgroundColor: '#722ed1' }} onClick={async () => {
+            const selected = data.filter(r => selectedRowKeys.includes(r.Mã_KH));
+            if (selected.length === 0) return;
+
             setSubmittingApproval(true);
             try {
-              const selected = filteredData.filter(r => selectedRowKeys.includes(r.Mã_KH));
-              const rows = selected.map(r => ({ Khu_vuc: r.Khu_Vực, Ma_ten_nvbh: r.Mã_Tên_NVBH, Ma_KH: r.Mã_KH, Ten_KH: r.Tên_KH, DC: r.Địa_Chỉ, Thu: r.Thứ, Tan_suat: r.Tần_Suất }));
+              // 1. Kiểm tra trạng thái hiện tại từ Server
+              const resCheck = await fetch('/api/khach-hang/tam-ngung/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ maKHs: selectedRowKeys })
+              });
+              const pendingList = await resCheck.json();
 
-              let username = '';
-              const userInfoStr = localStorage.getItem('user_info');
-              if (userInfoStr) {
-                const userInfo = JSON.parse(userInfoStr);
-                username = userInfo.username || '';
+              if (!Array.isArray(pendingList)) {
+                message.error('Không thể kiểm tra trạng thái đơn cũ');
+                setSubmittingApproval(false);
+                return;
               }
 
-              const res = await fetch('/api/khach-hang/tam-ngung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows, nguoi_dang_ky: username }) });
-              const json = await res.json();
-              if (json.success) {
-                message.success('Đã gửi yêu cầu xét duyệt!');
-                setSelectedRowKeys([]);
-                setTamNgungModalOpen(false);
-              } else message.error(json.error);
-            } catch { message.error('Lỗi kết nối'); } finally { setSubmittingApproval(false); }
+              const summary = selected.map(r => {
+                const existing = pendingList.find((p: any) => p.Ma_KH === r.Mã_KH);
+                let status = 'Đăng ký mới';
+                let color = 'green';
+                let isPending = false;
+
+                if (existing) {
+                  if (existing.Trang_thai_duyet === 'Từ chối') {
+                    status = 'Gửi lại (Bị từ chối trước đó)';
+                    color = 'orange';
+                  } else {
+                    status = `Đã gửi yêu cầu (${existing.Trang_thai_duyet})`;
+                    color = 'blue';
+                    isPending = true;
+                  }
+                }
+                return { mãKH: r.Mã_KH, tênKH: r.Tên_KH, status, color, isPending, original: r };
+              });
+
+              setSubmittingApproval(false);
+
+              Modal.confirm({
+                title: 'Xác nhận gửi đăng ký Tạm ngưng',
+                width: 500,
+                content: (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ marginBottom: 12 }}>Bạn đang gửi đăng ký cho <b>{summary.length}</b> khách hàng sau:</div>
+                    <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: 4, padding: 8 }}>
+                      {summary.map(s => (
+                        <div key={s.mãKH} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, borderBottom: '1px solid #fafafa', paddingBottom: 4 }}>
+                          <span style={{ fontSize: 13 }}><b>{s.mãKH}</b> - {s.tênKH}</span>
+                          <Tag color={s.color} variant="filled" style={{ fontSize: 11 }}>{s.status}</Tag>
+                        </div>
+                      ))}
+                    </div>
+                    {summary.some(s => s.isPending) && (
+                      <div style={{ marginTop: 12, color: '#fa8c16', fontSize: 12, fontStyle: 'italic' }}>
+                        * Lưu ý: Những khách hàng "Đã gửi yêu cầu" sẽ được hệ thống bỏ qua để tránh gửi trùng lặp.
+                      </div>
+                    )}
+                  </div>
+                ),
+                okText: 'Xác nhận gửi ngay',
+                cancelText: 'Hủy',
+                onOk: async () => {
+                  setSubmittingApproval(true);
+                  try {
+                    let username = '';
+                    const userInfoStr = localStorage.getItem('user_info');
+                    if (userInfoStr) {
+                      const userInfo = JSON.parse(userInfoStr);
+                      username = userInfo.username || '';
+                    }
+
+                    const rows = summary.filter(s => !s.isPending).map(s => ({
+                      Khu_vuc: s.original.Khu_Vực,
+                      Ma_ten_nvbh: s.original.Mã_Tên_NVBH,
+                      Ma_KH: s.mãKH,
+                      Ten_KH: s.tênKH,
+                      DC: s.original.Địa_Chỉ,
+                      Thu: s.original.Thứ,
+                      Tan_suat: s.original.Tần_Suất
+                    }));
+
+                    if (rows.length === 0) {
+                      message.warning('Không có khách hàng nào hợp lệ để gửi mới');
+                      return;
+                    }
+
+                    const res = await fetch('/api/khach-hang/tam-ngung', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ rows, nguoi_dang_ky: username })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                      message.success(`Đã gửi yêu cầu cho ${json.inserted + json.updated} khách hàng!`);
+                      setSelectedRowKeys([]);
+                      setTamNgungModalOpen(false);
+                    } else message.error(json.error);
+                  } catch { message.error('Lỗi kết nối khi gửi dữ liệu'); } finally { setSubmittingApproval(false); }
+                }
+              });
+            } catch (e) {
+              console.error('Check TN error:', e);
+              message.error('Lỗi khi kiểm tra dữ liệu');
+              setSubmittingApproval(false);
+            }
           }}>Gửi Manager duyệt TN</Button>
         ]}
       >
