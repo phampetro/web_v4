@@ -315,15 +315,15 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
           <Select placeholder="Tất cả" value={selectedKhuVuc} onChange={v => { setSelectedKhuVuc(v); setSelectedNVBH(undefined); setSelectedKH(undefined); }} allowClear showSearch options={khuVucOptions} style={{ width: '100%' }} />
         </div>
-        <div style={{ flex: 1, minWidth: 120 }}>
+        <div style={{ flex: 1.2, minWidth: 150 }}>
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>NVBH</div>
           <Select placeholder="Tất cả" value={selectedNVBH} onChange={v => { setSelectedNVBH(v); setSelectedKH(undefined); }} allowClear showSearch options={nvbhOptions} style={{ width: '100%' }} />
         </div>
-        <div style={{ flex: 1, minWidth: 120 }}>
+        <div style={{ flex: 2, minWidth: 250 }}>
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Mã - Tên KH</div>
           <Select placeholder="Tìm kiếm..." value={selectedKH} onChange={setSelectedKH} allowClear showSearch options={khOptions} style={{ width: '100%' }} />
         </div>
-        <div style={{ flex: 1, minWidth: 100 }}>
+        <div style={{ flex: 0.8, minWidth: 100 }}>
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Thứ</div>
           <Select mode="multiple" placeholder="Tất cả" value={selectedThu} onChange={setSelectedThu} allowClear options={THU_OPTIONS} style={{ width: '100%' }} maxTagCount="responsive" />
         </div>
@@ -331,7 +331,9 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Tần suất</div>
           <Select mode="multiple" placeholder="Tất cả" value={selectedTanSuat} onChange={setSelectedTanSuat} allowClear options={tanSuatOptions} style={{ width: '100%' }} maxTagCount="responsive" />
         </div>
-        <div style={{ flex: 1 }}></div>
+        <div style={{ whiteSpace: 'nowrap', paddingBottom: 6 }}>
+          <Checkbox checked={showAllKH} onChange={e => setShowAllKH(e.target.checked)}>Tất cả KH</Checkbox>
+        </div>
         <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
       </div>
 
