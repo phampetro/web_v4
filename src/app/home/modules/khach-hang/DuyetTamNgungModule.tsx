@@ -235,7 +235,7 @@ export default function DuyetTamNgungModule() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ flex: 1, minWidth: 120 }}>
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
           <Select placeholder="Tất cả" value={selectedKhuVuc} onChange={v => { setSelectedKhuVuc(v); setSelectedNVBH(undefined); }} allowClear showSearch options={khuVucOptions} style={{ width: '100%' }} />
@@ -248,6 +248,8 @@ export default function DuyetTamNgungModule() {
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Trạng thái</div>
           <Select placeholder="Tất cả" value={selectedTrangThai} onChange={setSelectedTrangThai} allowClear options={[{ label: 'Chờ duyệt', value: 'Chờ duyệt' }, { label: 'Đã duyệt', value: 'Đã duyệt' }, { label: 'Từ chối', value: 'Từ chối' }, { label: 'Tất cả', value: '' }]} style={{ width: '100%' }} />
         </div>
+        <div style={{ flex: 1 }}></div>
+        <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>Tải lại</Button>
       </div>
 
       <Spin spinning={loading} description={loadingText}>
@@ -283,7 +285,6 @@ export default function DuyetTamNgungModule() {
       </Spin>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>Tải lại</Button>
         <Tooltip title={selectedRowKeys.length === 0 ? "Hãy Tick chọn khách hàng cần duyệt" : ""}>
           <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleAction('Đã duyệt')} loading={approving} disabled={selectedRowKeys.length === 0} style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>Duyệt ({selectedRowKeys.length})</Button>
         </Tooltip>

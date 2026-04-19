@@ -310,7 +310,7 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ flex: 1, minWidth: 120 }}>
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
           <Select placeholder="Tất cả" value={selectedKhuVuc} onChange={v => { setSelectedKhuVuc(v); setSelectedNVBH(undefined); setSelectedKH(undefined); }} allowClear showSearch options={khuVucOptions} style={{ width: '100%' }} />
@@ -331,7 +331,8 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
           <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Tần suất</div>
           <Select mode="multiple" placeholder="Tất cả" value={selectedTanSuat} onChange={setSelectedTanSuat} allowClear options={tanSuatOptions} style={{ width: '100%' }} maxTagCount="responsive" />
         </div>
-        <div style={{ flex: 1.2 }}></div>
+        <div style={{ flex: 1 }}></div>
+        <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
       </div>
 
       <Spin spinning={loading} description={loadingText}>
@@ -362,7 +363,6 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
       </Spin>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
         <Button icon={<DownloadOutlined />} onClick={() => exportExcel(filteredData)} disabled={filteredData.length === 0} loading={exporting}>Xuất Excel</Button>
         <Button icon={<PauseCircleOutlined />} onClick={() => selectedRowKeys.length ? setTamNgungModalOpen(true) : message.warning('Hãy Tick chọn khách hàng cần tạm ngưng')} danger={selectedRowKeys.length > 0}>Tạm ngưng ({selectedRowKeys.length})</Button>
         <Button icon={<CameraOutlined />} onClick={captureTable} loading={capturing} disabled={filteredData.length === 0}>Chụp ảnh</Button>

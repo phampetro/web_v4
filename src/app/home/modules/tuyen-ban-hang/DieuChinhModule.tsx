@@ -242,7 +242,7 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             {/* Filter Section */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
                 <div style={{ flex: 1, maxWidth: 250 }}>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
                     <Select
@@ -277,8 +277,8 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                         style={{ width: '100%' }}
                     />
                 </div>
-
-                <div style={{ flex: 1.2 }}></div>
+                <div style={{ flex: 1 }}></div>
+                <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
             </div>
 
             <Spin spinning={loading || actionLoading} description={loadingText || actionLoadingText}>
@@ -315,7 +315,6 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
             </Spin>
 
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
                 <Button
                     icon={<FormOutlined />}
                     style={selectedRowKeys.length > 0 ? { color: '#faad14', borderColor: '#faad14' } : {}}

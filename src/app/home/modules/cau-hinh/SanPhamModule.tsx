@@ -58,7 +58,8 @@ export default function SanPhamModule() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [loadingText, setLoadingText] = useState("Đang tải dữ liệu...");
-  const [searchText, setSearchText] = useState('');
+   const [searchText, setSearchText] = useState('');
+  const [rightSearchText, setRightSearchText] = useState('');
   const [leftSelectedKeys, setLeftSelectedKeys] = useState<React.Key[]>([]);
   const [rightSelectedKeys, setRightSelectedKeys] = useState<React.Key[]>([]);
 
@@ -97,6 +98,10 @@ export default function SanPhamModule() {
     const selectedIds = new Set(selectedProducts.map(p => p.MA_SPQD));
     return allProducts.filter(p => !selectedIds.has(p.MA_SPQD) && (p.MA_SPQD.toLowerCase().includes(searchText.toLowerCase()) || p.TEN_SPQD.toLowerCase().includes(searchText.toLowerCase())));
   }, [allProducts, selectedProducts, searchText]);
+
+  const rightTableData = useMemo(() => {
+    return selectedProducts.filter(p => (p.MA_SPQD.toLowerCase().includes(rightSearchText.toLowerCase()) || p.TEN_SPQD.toLowerCase().includes(rightSearchText.toLowerCase())));
+  }, [selectedProducts, rightSearchText]);
 
   const updateSortOrders = (list: Product[]) => list.map((item, index) => ({ ...item, Thu_tu_sap_xep: index + 1 }));
 
@@ -150,7 +155,7 @@ export default function SanPhamModule() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <Space direction="vertical" size={0}><Title level={4} style={{ margin: 0 }}>Cấu hình sản phẩm bao phủ</Title><Text type="secondary" style={{ fontSize: 13 }}>Kéo thả để sắp xếp thứ tự hiển thị ưu tiên</Text></Space>
+        <Space orientation="vertical" size={0}><Title level={4} style={{ margin: 0 }}>Cấu hình sản phẩm bao phủ</Title><Text type="secondary" style={{ fontSize: 13 }}>Kéo thả để sắp xếp thứ tự hiển thị ưu tiên</Text></Space>
         <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} disabled={loading}>Lưu cấu hình</Button>
       </div>
       <Spin spinning={loading} description={loadingText}>
@@ -164,10 +169,13 @@ export default function SanPhamModule() {
             <Button icon={<LeftOutlined />} onClick={moveLeft} disabled={rightSelectedKeys.length === 0} />
           </Col>
           <Col span={13} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div style={{ height: 32, marginBottom: 12, display: 'flex', alignItems: 'center' }}><Text strong>Danh sách đã chọn ({selectedProducts.length})</Text></div>
+            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text strong>Danh sách đã chọn ({selectedProducts.length})</Text>
+              <Input placeholder="Lọc danh sách đã chọn..." prefix={<SearchOutlined />} value={rightSearchText} onChange={e => setRightSearchText(e.target.value)} allowClear style={{ width: 220 }} />
+            </div>
             <DndContext sensors={sensors} modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
               <SortableContext items={selectedProducts.map((i) => i.MA_SPQD)} strategy={verticalListSortingStrategy}>
-                <CustomTable components={{ body: { row: RowDnD } }} dataSource={selectedProducts} columns={rightColumns} rowKey="MA_SPQD" pagination={false} rowSelection={{ selectedRowKeys: rightSelectedKeys, onChange: setRightSelectedKeys }} onRow={(r) => ({ onClick: () => setRightSelectedKeys(p => p.includes(r.MA_SPQD) ? p.filter(k => k !== r.MA_SPQD) : [...p, r.MA_SPQD]), style: { cursor: 'pointer' } })} />
+                <CustomTable components={{ body: { row: RowDnD } }} dataSource={rightTableData} columns={rightColumns} rowKey="MA_SPQD" pagination={false} rowSelection={{ selectedRowKeys: rightSelectedKeys, onChange: setRightSelectedKeys }} onRow={(r) => ({ onClick: () => setRightSelectedKeys(p => p.includes(r.MA_SPQD) ? p.filter(k => k !== r.MA_SPQD) : [...p, r.MA_SPQD]), style: { cursor: 'pointer' } })} />
               </SortableContext>
             </DndContext>
           </Col>

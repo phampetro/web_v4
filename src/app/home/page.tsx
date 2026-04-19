@@ -34,6 +34,7 @@ import KPSDSModule from './modules/khach-hang/KPSDSModule';
 import DuyetTamNgungModule from './modules/khach-hang/DuyetTamNgungModule';
 import DieuChinhModule from './modules/tuyen-ban-hang/DieuChinhModule';
 import DuyetChinhModule from './modules/tuyen-ban-hang/DuyetChinhModule';
+import XemNhanhModule from './modules/tuyen-ban-hang/XemNhanhModule';
 import SanPhamModule from './modules/cau-hinh/SanPhamModule';
 import type { MenuProps } from 'antd';
 
@@ -68,6 +69,11 @@ const menuItems: MenuProps['items'] = [
     label: 'Tuyến bán hàng',
     children: [
       {
+        key: 'tuyen-ban-hang-xem-nhanh',
+        icon: <NodeIndexOutlined />,
+        label: 'Xem nhanh tuyến',
+      },
+      {
         key: 'tuyen-ban-hang-dieu-chinh',
         icon: <ToolOutlined />,
         label: 'Điều chỉnh tuyến',
@@ -100,6 +106,7 @@ const moduleMap: Record<string, React.FC<PageProps>> = {
   'khach-hang-kpsds': KPSDSModule,
   'khach-hang-duyet-tam-ngung': DuyetTamNgungModule,
   'tuyen-ban-hang-dieu-chinh': DieuChinhModule,
+  'tuyen-ban-hang-xem-nhanh': XemNhanhModule,
   'tuyen-ban-hang-duyet-chinh': DuyetChinhModule,
   'cau-hinh-san-pham': SanPhamModule,
 };
@@ -235,6 +242,7 @@ export default function HomePage() {
     dashboard: 'Dashboard',
     'khach-hang-kpsds': 'Khách hàng KPSDS',
     'khach-hang-duyet-tam-ngung': 'Duyệt tạm ngưng',
+    'tuyen-ban-hang-xem-nhanh': 'Xem nhanh tuyến',
     'tuyen-ban-hang-dieu-chinh': 'Điều chỉnh tuyến',
     'tuyen-ban-hang-duyet-chinh': 'Duyệt chỉnh tuyến',
     'cau-hinh-san-pham': 'Cấu hình sản phẩm',
