@@ -1,5 +1,6 @@
 import { connectToDB } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 export async function authenticateUser(username: string, password: string) {
   const db = await connectToDB();
@@ -10,5 +11,12 @@ export async function authenticateUser(username: string, password: string) {
   const passwordMatch = await bcrypt.compare(password, user.pass_hash);
   if (!passwordMatch) return null;
    // Trả về thông tin user (ẩn trường nhạy cảm)
-   return { id: user.ID, username: user.ID, quyenDL: user.Quyen_QL || '' };
+   return { id: user.ID, username: user.ID };
+}
+
+/**
+ * Tạo token ngẫu nhiên cho Session hoặc CSRF
+ */
+export function generateToken() {
+  return randomBytes(32).toString('hex');
 }

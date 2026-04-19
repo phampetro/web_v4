@@ -1,5 +1,5 @@
 const DB_NAME = 'DMS_Report_Cache';
-const DB_VERSION = 2;
+const DB_VERSION = 4;
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -15,6 +15,15 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('ds_kh_3m')) {
         db.createObjectStore('ds_kh_3m', { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('config_all_products')) {
+        db.createObjectStore('config_all_products', { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('config_user_products')) {
+        db.createObjectStore('config_user_products', { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('common_categories')) {
+        db.createObjectStore('common_categories', { keyPath: 'key' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -73,7 +82,7 @@ export async function getCacheMeta(key: string): Promise<string | null> {
   });
 }
 
-/** Xóa toàn bộ cache (khi logout, v.v.) */
+/** Xóa dữ liệu trong tất cả các bảng (khi logout, v.v.) */
 export async function clearAllCache(): Promise<void> {
   const db = await openDB();
   const storeNames = Array.from(db.objectStoreNames);

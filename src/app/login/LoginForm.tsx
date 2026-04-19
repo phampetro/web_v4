@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Alert, Card, Avatar, Typography, Spin, Divider } from 'antd';
+import { Form, Input, Button, Card, Avatar, Typography, Spin, Divider, message } from 'antd';
 import { LockOutlined, UserOutlined, LoginOutlined } from '@ant-design/icons';
 
 interface LoginFormProps {
@@ -8,23 +8,18 @@ interface LoginFormProps {
 
 export default function LoginForm({ onSubmit }: LoginFormProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const onFinish = async (values: { username: string; password: string }) => {
-    setError('');
     setLoading(true);
     try {
       const errMsg = await onSubmit(values.username, values.password);
       if (errMsg) {
-        setError(errMsg);
-        setSuccess(false);
-      } else {
-        setSuccess(true);
+        message.error(errMsg);
+        setLoading(false);
       }
+      // Thành công thì giữ loading để redirect
     } catch {
-      setError('Lỗi hệ thống, vui lòng thử lại sau!');
-    } finally {
+      message.error('Lỗi hệ thống, vui lòng thử lại sau!');
       setLoading(false);
     }
   };
@@ -66,28 +61,6 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
 
         <Divider style={{ margin: '0 0 20px 0' }} />
 
-        {error && (
-          <Alert
-            type="error"
-            title="Đăng nhập thất bại"
-            description={error}
-            showIcon
-            closable
-            onClose={() => setError('')}
-            style={{ marginBottom: 16, borderRadius: 8 }}
-          />
-        )}
-
-        {success && (
-          <Alert
-            type="success"
-            title="Đăng nhập thành công!"
-            description="Đang chuyển hướng..."
-            showIcon
-            style={{ marginBottom: 16, borderRadius: 8 }}
-          />
-        )}
-
         <Spin spinning={loading} description="Đang xác thực...">
           <Form
             name="login"
@@ -95,7 +68,7 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
             autoComplete="off"
             layout="vertical"
             size="large"
-            disabled={loading || success}
+            disabled={loading}
           >
             <Form.Item
               name="username"

@@ -1,6 +1,7 @@
-import React from 'react';
-import { Table } from 'antd';
+import { Table, Typography } from 'antd';
 import type { TableProps } from 'antd';
+
+const { Text } = Typography;
 
 interface CustomTableProps<RecordType> extends TableProps<RecordType> { }
 
@@ -36,8 +37,13 @@ function CustomTable<RecordType extends object = any>(props: CustomTableProps<Re
         }}
         columns={props.columns?.map(col => ({
           ...col,
-          ellipsis: col.ellipsis !== false ? true : false,
+          ellipsis: col.ellipsis !== false ? { tooltip: true } : false,
           align: col.align || 'center',
+          render: col.render || (v => (
+            <Text ellipsis={{ tooltip: true }} style={{ width: '100%', fontSize: 'inherit', color: 'inherit' }}>
+              {v}
+            </Text>
+          ))
         }))}
       />
       <style jsx global>{`
@@ -45,7 +51,7 @@ function CustomTable<RecordType extends object = any>(props: CustomTableProps<Re
           height: 32px !important;
           padding: 0 8px !important;
           font-size: 13px;
-          white-space: nowrap;
+          white-space: nowrap !important;
           vertical-align: middle !important; /* Căn giữa theo chiều dọc */
         }
         .custom-table-compact .ant-table-thead > tr > th {
@@ -54,6 +60,7 @@ function CustomTable<RecordType extends object = any>(props: CustomTableProps<Re
           background-color: #fafafa !important;
           font-weight: 700 !important;
           vertical-align: middle !important;
+          text-align: center !important;
         }
         .custom-table-row:hover td {
           background-color: #f0f7ff !important;

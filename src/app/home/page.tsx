@@ -29,16 +29,12 @@ import {
   Layout, Menu, Avatar, Typography, Dropdown, Button, theme, Space, Modal, Form, Input, message,
 } from 'antd';
 
-import DashboardPage from './pages/DashboardPage';
-import KH_KPSDSPage from './pages/KH_KPSDSPage';
-import DuyetTamNgungPage from './pages/DuyetTamNgungPage';
-import DieuChinhTuyenPage from './pages/DieuChinhTuyenPage';
-import DuyetDieuChinhTuyenPage from './pages/DuyetDieuChinhTuyenPage';
-import CauHinhSanPhamPage from './pages/CauHinhSanPhamPage';
-import BaoPhuKhuVucPage from './pages/BaoPhuKhuVucPage';
-import BaoPhuNVBHPage from './pages/BaoPhuNVBHPage';
-import BaoPhuTuyenPage from './pages/BaoPhuTuyenPage';
-import BaoPhuKhachHangPage from './pages/BaoPhuKhachHangPage';
+import DashboardModule from './modules/dashboard/DashboardModule';
+import KPSDSModule from './modules/khach-hang/KPSDSModule';
+import DuyetTamNgungModule from './modules/khach-hang/DuyetTamNgungModule';
+import DieuChinhModule from './modules/tuyen-ban-hang/DieuChinhModule';
+import DuyetChinhModule from './modules/tuyen-ban-hang/DuyetChinhModule';
+import SanPhamModule from './modules/cau-hinh/SanPhamModule';
 import type { MenuProps } from 'antd';
 
 const { Sider, Header, Content } = Layout;
@@ -50,70 +46,47 @@ const menuItems: MenuProps['items'] = [
     label: 'Dashboard',
   },
   {
-    key: 'kh_group',
+    key: 'khach-hang',
     icon: <TeamOutlined />,
-    label: 'Danh sách khách hàng',
+    label: 'Khách hàng',
     children: [
       {
-        key: 'kh_kpsds',
+        key: 'khach-hang-kpsds',
         icon: <DollarOutlined />,
         label: 'Khách hàng KPSDS',
       },
       {
-        key: 'duyet_tamngung',
+        key: 'khach-hang-duyet-tam-ngung',
         icon: <AuditOutlined />,
         label: 'Duyệt tạm ngưng',
       },
     ],
   },
   {
-    key: 'tuyen_ban_hang',
+    key: 'tuyen-ban-hang',
     icon: <EnvironmentOutlined />,
     label: 'Tuyến bán hàng',
     children: [
       {
-        key: 'dieu_chinh_tuyen',
+        key: 'tuyen-ban-hang-dieu-chinh',
         icon: <ToolOutlined />,
         label: 'Điều chỉnh tuyến',
       },
       {
-        key: 'duyet_dieu_chinh_tuyen',
+        key: 'tuyen-ban-hang-duyet-chinh',
         icon: <CheckSquareOutlined />,
         label: 'Duyệt chỉnh tuyến',
       },
     ],
   },
   {
-    key: 'bao_cao_bao_phu',
-    icon: <BarChartOutlined />,
-    label: 'Báo cáo bao phủ',
+    key: 'cau-hinh',
+    icon: <SettingOutlined />,
+    label: 'Cấu hình',
     children: [
-      { key: 'cau_hinh_san_pham', icon: <SettingOutlined />, label: 'Cấu hình sản phẩm' },
-      { key: 'bao_phu_khu_vuc', icon: <AreaChartOutlined />, label: 'Xem theo khu vực' },
-      { key: 'bao_phu_nvbh', icon: <UserOutlined />, label: 'Xem theo NVBH' },
-      { key: 'bao_phu_tuyen', icon: <NodeIndexOutlined />, label: 'Xem theo tuyến' },
-      { key: 'bao_phu_khach_hang', icon: <SolutionOutlined />, label: 'Xem theo khách hàng' },
+      { key: 'cau-hinh-san-pham', icon: <SettingOutlined />, label: 'Cấu hình sản phẩm' },
     ],
   },
-  // {
-  //   key: 'reports',
-  //   icon: <BarChartOutlined />,
-  //   label: 'Báo cáo',
-  //   children: [
-  //     { key: 'report-sales', icon: <FileTextOutlined />, label: 'Báo cáo bán hàng' },
-  //     { key: 'report-inventory', icon: <FileTextOutlined />, label: 'Báo cáo tồn kho' },
-  //   ],
-  // },
-  // {
-  //   key: 'users',
-  //   icon: <TeamOutlined />,
-  //   label: 'Quản lý người dùng',
-  // },
-  // {
-  //   key: 'settings',
-  //   icon: <SettingOutlined />,
-  //   label: 'Cài đặt',
-  // },
 ];
 
 
@@ -122,17 +95,13 @@ interface PageProps {
   setNgayUpdate: (d: string) => void;
 }
 
-const pageComponentMap: Record<string, React.FC<PageProps>> = {
-  dashboard: DashboardPage,
-  kh_kpsds: KH_KPSDSPage,
-  duyet_tamngung: DuyetTamNgungPage,
-  dieu_chinh_tuyen: DieuChinhTuyenPage,
-  duyet_dieu_chinh_tuyen: DuyetDieuChinhTuyenPage,
-  cau_hinh_san_pham: CauHinhSanPhamPage,
-  bao_phu_khu_vuc: BaoPhuKhuVucPage,
-  bao_phu_nvbh: BaoPhuNVBHPage,
-  bao_phu_tuyen: BaoPhuTuyenPage,
-  bao_phu_khach_hang: BaoPhuKhachHangPage,
+const moduleMap: Record<string, React.FC<PageProps>> = {
+  dashboard: DashboardModule,
+  'khach-hang-kpsds': KPSDSModule,
+  'khach-hang-duyet-tam-ngung': DuyetTamNgungModule,
+  'tuyen-ban-hang-dieu-chinh': DieuChinhModule,
+  'tuyen-ban-hang-duyet-chinh': DuyetChinhModule,
+  'cau-hinh-san-pham': SanPhamModule,
 };
 
 export default function HomePage() {
@@ -148,55 +117,85 @@ export default function HomePage() {
   const [ngayUpdate, setNgayUpdate] = useState<string>('');
   const [ngayUpdateLoading, setNgayUpdateLoading] = useState(false);
 
-  // Đọc username và ngày cập nhật từ cookie
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const match = document.cookie.match(/(?:^|; )username=([^;]*)/);
-      if (match) {
-        setUsername(decodeURIComponent(match[1]));
-      }
-      const ngay = getCookie('ngay_update');
-      if (ngay) setNgayUpdate(ngay);
-      else fetchNgayUpdate();
-    }
-    // eslint-disable-next-line
-  }, []);
-
-  // Lấy ngày cập nhật từ API và lưu cookie
-  const fetchNgayUpdate = async () => {
+  // 1. Khai báo hàm fetchNgayUpdate (Full Init/Refresh)
+  const fetchNgayUpdate = async (userParam?: string) => {
+    const targetUser = userParam || username;
+    if (!targetUser) return;
+    
     setNgayUpdateLoading(true);
     try {
-      const res = await fetch('/api/ngay-update');
+      const res = await fetch(`/api/cache-dung-chung?username=${encodeURIComponent(targetUser)}`);
+      if (!res.ok) throw new Error('API Error');
       const data = await res.json();
+      
       if (data.ngayUpdate) {
         setNgayUpdate(data.ngayUpdate);
-        setCookie('ngay_update', data.ngayUpdate, 7);
-      } else {
-        setNgayUpdate('');
-        messageApi.error('Không lấy được ngày cập nhật');
       }
-    } catch {
-      setNgayUpdate('');
-      messageApi.error('Lỗi kết nối ngày cập nhật');
+
+      // Lưu Ngày Update, QuyenDL, Quyen và danh mục dùng chung vào IndexedDB
+      const { setCacheMeta } = await import('../../utils/indexedDB');
+      
+      if (data.ngayUpdate) await setCacheMeta('common_ngay_update', data.ngayUpdate);
+      if (data.quyenDL) await setCacheMeta('common_quyen_dl', data.quyenDL);
+      if (data.quyen) await setCacheMeta('common_quyen_user', data.quyen);
+      
+      if (data.khuVucList) await setCacheMeta('common_khuvuc', JSON.stringify(data.khuVucList));
+      if (data.nvbhList) await setCacheMeta('common_nvbh', JSON.stringify(data.nvbhList));
+
+      if (!userParam) messageApi.success('Đã cập nhật dữ liệu mới nhất');
+
+    } catch (error) {
+      console.error('Init Error:', error);
+      messageApi.error('Lỗi khởi tạo dữ liệu dùng chung');
     } finally {
       setNgayUpdateLoading(false);
     }
   };
 
+  // 2. useEffect để khởi tạo khi load trang
+  useEffect(() => {
+    const userInfoStr = localStorage.getItem('user_info');
+    if (userInfoStr) {
+      const userInfo = JSON.parse(userInfoStr);
+      const user = userInfo.username || '';
+      setUsername(user);
+      fetchNgayUpdate(user);
+    }
+  }, []);
+
   const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
-    clearAllCookies();
-    try { const { clearAllCache } = await import('../../utils/indexedDB'); await clearAllCache(); } catch { }
-    router.replace('/login');
+    try {
+      // 1. Gọi API xóa session cookie
+      await fetch('/api/auth/logout', { method: 'POST' });
+      
+      // 2. Xóa sạch thông tin User và các cờ trạng thái
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // 3. Xóa Cookies (nếu còn)
+      clearAllCookies();
+      
+      // 4. Xóa sạch dữ liệu cache trong IndexedDB
+      const { clearAllCache } = await import('../../utils/indexedDB');
+      await clearAllCache();
+      
+      // 5. Chuyển hướng
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Dù lỗi API vẫn nên xóa local và chuyển hướng
+      localStorage.clear();
+      router.replace('/login');
+    }
   };
 
   const handleChangePassword = async (values: { oldPassword: string; newPassword: string }) => {
     setChangePasswordLoading(true);
     try {
-      const res = await fetch('/api/change-password', {
+      const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, username }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -234,23 +233,14 @@ export default function HomePage() {
 
   const pageTitleMap: Record<string, string> = {
     dashboard: 'Dashboard',
-    'report-sales': 'Báo cáo bán hàng',
-    'report-inventory': 'Báo cáo tồn kho',
-    users: 'Quản lý người dùng',
-    settings: 'Cài đặt',
-    kh_kpsds: 'Khách hàng KPSDS',
-    ds_kh_3m: 'Doanh số KH 3T',
-    duyet_tamngung: 'Duyệt tạm ngưng',
-    dieu_chinh_tuyen: 'Điều chỉnh tuyến',
-    duyet_dieu_chinh_tuyen: 'Duyệt chỉnh tuyến',
-    cau_hinh_san_pham: 'Cấu hình sản phẩm',
-    bao_phu_khu_vuc: 'Bao phủ theo khu vực',
-    bao_phu_nvbh: 'Bao phủ theo NVBH',
-    bao_phu_tuyen: 'Bao phủ theo tuyến',
-    bao_phu_khach_hang: 'Bao phủ theo khách hàng',
+    'khach-hang-kpsds': 'Khách hàng KPSDS',
+    'khach-hang-duyet-tam-ngung': 'Duyệt tạm ngưng',
+    'tuyen-ban-hang-dieu-chinh': 'Điều chỉnh tuyến',
+    'tuyen-ban-hang-duyet-chinh': 'Duyệt chỉnh tuyến',
+    'cau-hinh-san-pham': 'Cấu hình sản phẩm',
   };
 
-  const PageComponent = pageComponentMap[selectedKey] || DashboardPage;
+  const PageComponent = moduleMap[selectedKey] || DashboardModule;
 
   return (
     <>
@@ -318,7 +308,7 @@ export default function HomePage() {
           collapsed={collapsed}
           onCollapse={setCollapsed}
           trigger={null}
-          width={240}
+          width={260}
           collapsedWidth={72}
           style={{
             background: token.colorBgContainer,
@@ -386,7 +376,7 @@ export default function HomePage() {
                 type="text"
                 size="small"
                 icon={<ReloadOutlined spin={ngayUpdateLoading} />}
-                onClick={fetchNgayUpdate}
+                onClick={() => fetchNgayUpdate()}
                 style={{ color: token.colorPrimary, flexShrink: 0 }}
                 title="Cập nhật lại ngày"
                 tabIndex={-1}
@@ -398,7 +388,7 @@ export default function HomePage() {
               <Menu
                 mode="inline"
                 selectedKeys={[selectedKey]}
-                defaultOpenKeys={['kh_group', 'tuyen_ban_hang', 'bao_cao_bao_phu']}
+                defaultOpenKeys={['khach-hang', 'tuyen-ban-hang', 'cau-hinh']}
                 items={menuItems}
                 style={{ border: 'none', marginTop: 8 }}
                 onClick={({ key }) => setSelectedKey(key)}
@@ -435,7 +425,7 @@ export default function HomePage() {
           </div>
         </Sider>
 
-        <Layout style={{ marginLeft: collapsed ? 72 : 240, transition: 'margin-left 0.2s', height: '100vh' }}>
+        <Layout style={{ marginLeft: collapsed ? 72 : 260, transition: 'margin-left 0.2s', height: '100vh' }}>
           {/* Top Header */}
           <Header style={{
             background: token.colorBgContainer,
