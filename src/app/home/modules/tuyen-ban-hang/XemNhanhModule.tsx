@@ -115,7 +115,7 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
       ...g,
       tongKH: g.khSet.size
     })).sort((a, b) => a.khuVuc.localeCompare(b.khuVuc) || a.nvbh.localeCompare(b.nvbh));
-  }, [data, selectedKhuVuc]);
+  }, [data, selectedKhuVuc, choPhoMap]);
 
   const getCellProps = (val: any) => {
     const total = val?.total || 0;
