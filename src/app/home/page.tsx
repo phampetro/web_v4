@@ -21,6 +21,7 @@ import {
   AreaChartOutlined,
   NodeIndexOutlined,
   SolutionOutlined,
+  ShopOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { setCookie, getCookie, clearAllCookies } from '../../utils/cookie';
@@ -31,11 +32,13 @@ import {
 
 import DashboardModule from './modules/dashboard/DashboardModule';
 import KPSDSModule from './modules/khach-hang/KPSDSModule';
+import ChoPhoModule from './modules/khach-hang/ChoPhoModule';
+import DuyetChoPhoModule from './modules/khach-hang/DuyetChoPhoModule';
 import DuyetTamNgungModule from './modules/khach-hang/DuyetTamNgungModule';
 import DieuChinhModule from './modules/tuyen-ban-hang/DieuChinhModule';
 import DuyetChinhModule from './modules/tuyen-ban-hang/DuyetChinhModule';
 import XemNhanhModule from './modules/tuyen-ban-hang/XemNhanhModule';
-import SanPhamModule from './modules/cau-hinh/SanPhamModule';
+import SanPhamModule from './modules/bao-cao-bao-phu/SanPhamModule';
 import type { MenuProps } from 'antd';
 
 const { Sider, Header, Content } = Layout;
@@ -56,6 +59,8 @@ const menuItems: MenuProps['items'] = [
         icon: <DollarOutlined />,
         label: 'Khách hàng KPSDS',
       },
+      { key: 'khach-hang-cho-pho', label: 'Khách hàng Chợ - Phố', icon: <ShopOutlined /> },
+      { key: 'duyet-cho-pho', label: 'Duyệt Chợ - Phố', icon: <CheckSquareOutlined /> },
       {
         key: 'khach-hang-duyet-tam-ngung',
         icon: <AuditOutlined />,
@@ -86,11 +91,11 @@ const menuItems: MenuProps['items'] = [
     ],
   },
   {
-    key: 'cau-hinh',
+    key: 'bao-cao-bao-phu',
     icon: <SettingOutlined />,
-    label: 'Cấu hình',
+    label: 'Báo cáo bao phủ',
     children: [
-      { key: 'cau-hinh-san-pham', icon: <SettingOutlined />, label: 'Cấu hình sản phẩm' },
+      { key: 'bao-cao-bao-phu-san-pham', icon: <SettingOutlined />, label: 'Cấu hình sản phẩm' },
     ],
   },
 ];
@@ -104,11 +109,13 @@ interface PageProps {
 const moduleMap: Record<string, React.FC<PageProps>> = {
   dashboard: DashboardModule,
   'khach-hang-kpsds': KPSDSModule,
+  'khach-hang-cho-pho': ChoPhoModule,
+  'duyet-cho-pho': DuyetChoPhoModule,
   'khach-hang-duyet-tam-ngung': DuyetTamNgungModule,
   'tuyen-ban-hang-dieu-chinh': DieuChinhModule,
   'tuyen-ban-hang-xem-nhanh': XemNhanhModule,
   'tuyen-ban-hang-duyet-chinh': DuyetChinhModule,
-  'cau-hinh-san-pham': SanPhamModule,
+  'bao-cao-bao-phu-san-pham': SanPhamModule,
 };
 
 export default function HomePage() {
@@ -128,24 +135,24 @@ export default function HomePage() {
   const fetchNgayUpdate = async (userParam?: string) => {
     const targetUser = userParam || username;
     if (!targetUser) return;
-    
+
     setNgayUpdateLoading(true);
     try {
       const res = await fetch(`/api/cache-dung-chung?username=${encodeURIComponent(targetUser)}`);
       if (!res.ok) throw new Error('API Error');
       const data = await res.json();
-      
+
       if (data.ngayUpdate) {
         setNgayUpdate(data.ngayUpdate);
       }
 
       // Lưu Ngày Update, QuyenDL, Quyen và danh mục dùng chung vào IndexedDB
       const { setCacheMeta } = await import('../../utils/indexedDB');
-      
+
       if (data.ngayUpdate) await setCacheMeta('common_ngay_update', data.ngayUpdate);
       if (data.quyenDL) await setCacheMeta('common_quyen_dl', data.quyenDL);
       if (data.quyen) await setCacheMeta('common_quyen_user', data.quyen);
-      
+
       if (data.khuVucList) await setCacheMeta('common_khuvuc', JSON.stringify(data.khuVucList));
       if (data.nvbhList) await setCacheMeta('common_nvbh', JSON.stringify(data.nvbhList));
 
@@ -174,18 +181,18 @@ export default function HomePage() {
     try {
       // 1. Gọi API xóa session cookie
       await fetch('/api/auth/logout', { method: 'POST' });
-      
+
       // 2. Xóa sạch thông tin User và các cờ trạng thái
       localStorage.clear();
       sessionStorage.clear();
-      
+
       // 3. Xóa Cookies (nếu còn)
       clearAllCookies();
-      
+
       // 4. Xóa sạch dữ liệu cache trong IndexedDB
       const { clearAllCache } = await import('../../utils/indexedDB');
       await clearAllCache();
-      
+
       // 5. Chuyển hướng
       router.replace('/login');
     } catch (error) {
@@ -241,14 +248,25 @@ export default function HomePage() {
   const pageTitleMap: Record<string, string> = {
     dashboard: 'Dashboard',
     'khach-hang-kpsds': 'Khách hàng KPSDS',
+    'khach-hang-cho-pho': 'Báo cáo Khách hàng Chợ - Phố',
+    'duyet-cho-pho': 'Phê duyệt phân loại Chợ - Phố',
     'khach-hang-duyet-tam-ngung': 'Duyệt tạm ngưng',
     'tuyen-ban-hang-xem-nhanh': 'Xem nhanh tuyến',
     'tuyen-ban-hang-dieu-chinh': 'Điều chỉnh tuyến',
     'tuyen-ban-hang-duyet-chinh': 'Duyệt chỉnh tuyến',
-    'cau-hinh-san-pham': 'Cấu hình sản phẩm',
+    'bao-cao-bao-phu-san-pham': 'Cấu hình sản phẩm',
   };
 
-  const PageComponent = moduleMap[selectedKey] || DashboardModule;
+  const renderContent = () => {
+    switch (selectedKey) {
+      case 'khach-hang-cho-pho': return <ChoPhoModule ngayUpdate={ngayUpdate} setNgayUpdate={setNgayUpdate} />;
+      case 'duyet-cho-pho': return <DuyetChoPhoModule ngayUpdate={ngayUpdate} setNgayUpdate={setNgayUpdate} />;
+      default: {
+        const PageComponent = moduleMap[selectedKey] || DashboardModule;
+        return <PageComponent ngayUpdate={ngayUpdate} setNgayUpdate={setNgayUpdate} />;
+      }
+    }
+  };
 
   return (
     <>
@@ -396,7 +414,7 @@ export default function HomePage() {
               <Menu
                 mode="inline"
                 selectedKeys={[selectedKey]}
-                defaultOpenKeys={['khach-hang', 'tuyen-ban-hang', 'cau-hinh']}
+                defaultOpenKeys={['khach-hang', 'tuyen-ban-hang', 'bao-cao-bao-phu']}
                 items={menuItems}
                 style={{ border: 'none', marginTop: 8 }}
                 onClick={({ key }) => setSelectedKey(key)}
@@ -458,7 +476,7 @@ export default function HomePage() {
 
           {/* Content */}
           <Content style={{ margin: 10, padding: 24, background: token.colorBgContainer, borderRadius: 12, flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            <PageComponent ngayUpdate={ngayUpdate} setNgayUpdate={setNgayUpdate} />
+            {renderContent()}
           </Content>
         </Layout>
       </Layout>

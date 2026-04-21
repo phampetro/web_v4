@@ -12,7 +12,7 @@ function CustomTable<RecordType extends object = any>(props: CustomTableProps<Re
         {...props}
         className={`custom-table-compact ${props.className || ''}`}
         size={props.size || "small"}
-        virtual={props.virtual !== undefined ? props.virtual : true}
+        virtual={props.virtual !== undefined ? props.virtual : (typeof props.scroll?.y === 'number')}
         rowSelection={props.rowSelection ? {
           columnWidth: 40,
           ...props.rowSelection
@@ -35,13 +35,13 @@ function CustomTable<RecordType extends object = any>(props: CustomTableProps<Re
           }
           return `custom-table-row ${extraClass}`.trim();
         }}
-        columns={props.columns?.map(col => ({
+        columns={props.columns?.map((col: any) => ({
           ...col,
           ellipsis: col.ellipsis !== false ? { tooltip: true } : false,
-          align: col.align || 'center',
-          render: col.render || (v => (
+          align: (col.align || 'center') as 'left' | 'center' | 'right',
+          render: col.render || ((v: any) => (
             <Text ellipsis={{ tooltip: true }} style={{ width: '100%', fontSize: 'inherit', color: 'inherit' }}>
-              {v}
+              {v ?? ''}
             </Text>
           ))
         }))}

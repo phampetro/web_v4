@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo } from 'react';
-import { Select, Spin, Typography, Button } from 'antd';
+import { Select, Spin, Typography, Button, Tooltip } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
 import { useCachedData } from '../../../../hooks/useCachedData';
 import { ReloadOutlined } from '@ant-design/icons';
@@ -56,17 +56,15 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
   // Tính toán bảng tổng hợp từ dữ liệu thô (Aggregation)
   const summaryData = useMemo(() => {
     const groups: Record<string, any> = {};
+    const days = ['t2', 't3', 't4', 't5', 't6', 't7', 'cn'];
 
     data.forEach(r => {
-      // Lọc theo Khu vực nếu người dùng chọn
       if (selectedKhuVuc && r.Khu_Vực !== selectedKhuVuc) return;
 
-      // Logic đếm đặc biệt cho F2: Chỉ đếm nếu có chữ "v"
       const tanSuat = r.Tần_Suất || '';
       const isF2 = tanSuat.includes('F2');
       const hasV = tanSuat.toLowerCase().includes('v');
-      
-      if (isF2 && !hasV) return; // Bỏ qua nếu là F2 nhưng không có chữ "v"
+      if (isF2 && !hasV) return;
 
       const key = `${r.Khu_Vực}_${r.Mã_Tên_NVBH}`;
       if (!groups[key]) {
@@ -74,57 +72,89 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
           key,
           khuVuc: r.Khu_Vực,
           nvbh: r.Mã_Tên_NVBH,
-          khSet: new Set(), // Dùng Set để đếm mã KH duy nhất
-          t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0, cn: 0
+          khSet: new Set(),
         };
+        days.forEach(d => {
+          groups[key][d] = { total: 0, details: {} as Record<string, number> };
+        });
       }
 
       const g = groups[key];
       g.khSet.add(r.Mã_KH);
 
-      // Đếm số lượng khách hàng theo Thứ
-      const thu = r.Thứ || '';
-      if (thu.includes('T2')) g.t2++;
-      if (thu.includes('T3')) g.t3++;
-      if (thu.includes('T4')) g.t4++;
-      if (thu.includes('T5')) g.t5++;
-      if (thu.includes('T6')) g.t6++;
-      if (thu.includes('T7')) g.t7++;
-      if (thu.includes('CN')) g.cn++;
+      const thuStr = r.Thứ || '';
+      const dayMapping: Record<string, string> = { 'T2': 't2', 'T3': 't3', 'T4': 't4', 'T5': 't5', 'T6': 't6', 'T7': 't7', 'CN': 'cn' };
+
+      Object.entries(dayMapping).forEach(([label, key]) => {
+        if (thuStr.includes(label)) {
+          g[key].total++;
+          g[key].details[tanSuat] = (g[key].details[tanSuat] || 0) + 1;
+        }
+      });
     });
 
-    // Chuyển Set thành con số cụ thể
     return Object.values(groups).map(g => ({
       ...g,
       tongKH: g.khSet.size
     })).sort((a, b) => a.khuVuc.localeCompare(b.khuVuc) || a.nvbh.localeCompare(b.nvbh));
   }, [data, selectedKhuVuc]);
 
-  const renderCount = (v: number) => (
-    <Text strong={v < 30} style={{ color: v < 30 ? '#cf1322' : 'inherit' }}>
-      {v}
-    </Text>
-  );
-
-  const getCellProps = (v: number) => ({
-    style: {
-      backgroundColor: v < 30 ? '#fff1f0' : undefined,
-      transition: 'all 0.3s'
+  const getCellProps = (val: any) => {
+    const num = typeof val === 'object' ? val.total : val;
+    if (num > 0 && num < 30) {
+      return { style: { backgroundColor: '#fff1f0', fontWeight: 'bold' } };
     }
-  });
+    return {};
+  };
 
-  const columns: ColumnsType<SummaryRecord> = [
-    { title: 'STT', key: 'stt', width: 50, align: 'center', fixed: 'left', render: (_v, _r, index) => index + 1 },
-    { title: 'Khu vực', dataIndex: 'khuVuc', key: 'khuVuc', width: 130, fixed: 'left', align: 'left' },
-    { title: 'Mã - Tên NV', dataIndex: 'nvbh', key: 'nvbh', width: 250, fixed: 'left', align: 'left' },
-    { 
-      title: 'Tổng KH', 
-      dataIndex: 'tongKH', 
-      key: 'tongKH', 
-      width: 100, 
-      align: 'center', 
-      onCell: (r) => getCellProps(r.tongKH),
-      render: (v) => <Text strong style={{ color: v < 30 ? '#cf1322' : '#1677ff' }}>{v}</Text> 
+  const renderCount = (val: any) => {
+    const total = val?.total || 0;
+    if (total === 0) return <Text type="secondary">-</Text>;
+
+    // Tạo nội dung cho Tooltip
+    const tooltipContent = (
+      <div style={{ padding: '4px' }}>
+        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.3)', marginBottom: '4px', paddingBottom: '2px', fontWeight: 'bold' }}>
+          Chi tiết tần suất:
+        </div>
+        {Object.entries(val.details as Record<string, number>)
+          .sort((a, b) => b[1] - a[1]) // Hiện số lượng nhiều lên trước
+          .map(([ts, count]) => {
+            // Loại bỏ chữ "v" hoặc " v" ở cuối chuỗi để hiển thị đẹp hơn
+            const displayTs = ts.replace(/\s*v$/i, '').trim();
+            return (
+              <div key={ts} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+                <span>{displayTs}:</span>
+                <span style={{ fontWeight: 'bold' }}>{count}</span>
+              </div>
+            );
+          })}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.3)', marginTop: '4px', paddingTop: '2px', textAlign: 'right' }}>
+          Tổng: <b>{total}</b>
+        </div>
+      </div>
+    );
+
+    return (
+      <Tooltip title={tooltipContent} color="#262626">
+        <Text strong style={{ color: total < 30 ? '#cf1322' : '#0958d9', cursor: 'help' }}>
+          {total}
+        </Text>
+      </Tooltip>
+    );
+  };
+
+  const columns: ColumnsType<any> = [
+    { title: 'STT', key: 'stt', width: 50, align: 'center', fixed: 'left', render: (_, __, i) => i + 1 },
+    { title: 'Khu vực', dataIndex: 'khuVuc', key: 'khuVuc', width: 100, align: 'left', fixed: 'left' },
+    { title: 'Mã - Tên NVBH', dataIndex: 'nvbh', key: 'nvbh', width: 220, align: 'left', fixed: 'left' },
+    {
+      title: 'Tổng KH',
+      dataIndex: 'tongKH',
+      key: 'tongKH',
+      width: 90,
+      align: 'center',
+      render: (v) => <Text strong style={{ color: '#000' }}>{v}</Text>
     },
     { title: 'Thứ 2', dataIndex: 't2', key: 't2', width: 80, align: 'center', onCell: (r) => getCellProps(r.t2), render: renderCount },
     { title: 'Thứ 3', dataIndex: 't3', key: 't3', width: 80, align: 'center', onCell: (r) => getCellProps(r.t3), render: renderCount },
@@ -167,7 +197,7 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
             pageSizeOptions: PAGE_SIZE_OPTIONS,
             showTotal: (total, range) => <span>{range[0]}-{range[1]} / {total} — Đang hiện: <b>{summaryData.length}</b> dòng</span>
           }}
-          scroll={{ x: 1000, y: 'calc(100vh - 280px)' }}
+          scroll={{ x: 1000, y: 550 }}
         />
       </Spin>
     </div>

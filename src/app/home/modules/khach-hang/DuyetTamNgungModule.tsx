@@ -64,11 +64,8 @@ export default function DuyetTamNgungModule() {
     loadCache();
   }, []);
 
-  const [loadingText, setLoadingText] = useState('');
-
-  const fetchData = async () => {
+  const fetchData = async (isManual = false) => {
     setLoading(true);
-    setLoadingText('Đang tải dữ liệu mới từ Server...');
     try {
       const { getCacheMeta } = await import('../../../../utils/indexedDB');
       let quyenQL = (await getCacheMeta('common_quyen_dl')) || '';
@@ -80,16 +77,21 @@ export default function DuyetTamNgungModule() {
           quyenQL = userInfo.quyenDL || '';
         }
       }
-      // Thêm timestamp để force refresh từ server
+
       const res = await fetch(`/api/khach-hang/tam-ngung?quyen_dl=${encodeURIComponent(quyenQL)}&_t=${Date.now()}`);
       const json = await res.json();
-      if (json.data) setData(json.data);
-    } catch {
+      
+      if (json.data) {
+        setData(json.data);
+        if (isManual) {
+          message.success('Đã tải mới dữ liệu thành công!');
+        }
+      }
+    } catch (e) {
       setData([]);
       message.error('Lỗi tải dữ liệu');
     } finally {
       setLoading(false);
-      setLoadingText('');
     }
   };
 
@@ -249,10 +251,10 @@ export default function DuyetTamNgungModule() {
           <Select placeholder="Tất cả" value={selectedTrangThai} onChange={setSelectedTrangThai} allowClear options={[{ label: 'Chờ duyệt', value: 'Chờ duyệt' }, { label: 'Đã duyệt', value: 'Đã duyệt' }, { label: 'Từ chối', value: 'Từ chối' }, { label: 'Tất cả', value: '' }]} style={{ width: '100%' }} />
         </div>
         <div style={{ flex: 1 }}></div>
-        <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>Tải lại</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => fetchData(true)} loading={loading}>Tải lại</Button>
       </div>
 
-      <Spin spinning={loading} description={loadingText}>
+      <Spin spinning={loading}>
         <CustomTable
           columns={columns}
           dataSource={filteredData}
@@ -285,15 +287,34 @@ export default function DuyetTamNgungModule() {
       </Spin>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <Tooltip title={selectedRowKeys.length === 0 ? "Hãy Tick chọn khách hàng cần duyệt" : ""}>
-          <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleAction('Đã duyệt')} loading={approving} disabled={selectedRowKeys.length === 0} style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>Duyệt ({selectedRowKeys.length})</Button>
-        </Tooltip>
-        <Tooltip title={selectedRowKeys.length === 0 ? "Hãy Tick chọn khách hàng cần từ chối" : ""}>
-          <Button danger icon={<CloseCircleOutlined />} onClick={() => handleAction('Từ chối')} loading={approving} disabled={selectedRowKeys.length === 0}>Từ chối ({selectedRowKeys.length})</Button>
-        </Tooltip>
-        <Tooltip title={selectedRowKeys.length === 0 ? "Hãy Tick chọn khách hàng cần xóa" : ""}>
-          <Button danger ghost icon={<DeleteOutlined />} onClick={handleDelete} loading={deleting} disabled={selectedRowKeys.length === 0}>Xóa ({selectedRowKeys.length})</Button>
-        </Tooltip>
+        <Button 
+          danger 
+          icon={<DeleteOutlined />} 
+          onClick={handleDelete} 
+          disabled={selectedRowKeys.length === 0}
+        >
+          Xóa ({selectedRowKeys.length})
+        </Button>
+        <Button 
+          danger 
+          type="primary" 
+          icon={<CloseCircleOutlined />} 
+          onClick={() => handleAction('Từ chối')} 
+          loading={approving} 
+          disabled={selectedRowKeys.length === 0}
+        >
+          Từ chối ({selectedRowKeys.length})
+        </Button>
+        <Button 
+          type="primary" 
+          icon={<CheckCircleOutlined />} 
+          onClick={() => handleAction('Đã duyệt')} 
+          loading={approving} 
+          disabled={selectedRowKeys.length === 0} 
+          style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+        >
+          Duyệt ({selectedRowKeys.length})
+        </Button>
       </div>
     </div>
   );

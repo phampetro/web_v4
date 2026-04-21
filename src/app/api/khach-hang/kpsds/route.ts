@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     const db = await connectToDB();
 
     // Lấy ngày cập nhật mới nhất
-    const resNgay = await db.query('SELECT TOP(1) [Ngày_Update] FROM view_ReportVBA_NgayUpdate');
-    const serverNgayUpdate = resNgay.recordset[0]?.['Ngày_Update'] ?? null;
+    const resNgay = await db.query('SELECT TOP(1) [Ngay_Update] FROM Web_NgayUpdate');
+    const serverNgayUpdate = resNgay.recordset[0]?.['Ngay_Update'] ?? null;
 
     if (checkOnly) {
       return NextResponse.json({ ngayUpdate: serverNgayUpdate });

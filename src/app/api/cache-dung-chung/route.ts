@@ -12,11 +12,11 @@ export async function GET(req: NextRequest) {
 
     // Tối ưu: Chạy song song việc lấy Ngày Update và Thông tin User
     const [resNgay, resUser] = await Promise.all([
-      db.query('SELECT TOP(1) [Ngày_Update] FROM view_ReportVBA_NgayUpdate'),
+      db.query('SELECT TOP(1) [Ngay_Update] FROM Web_NgayUpdate'),
       db.query`SELECT Quyen_QL, Quyen FROM UserInfo WHERE ID = ${username}`
     ]);
 
-    const ngayUpdate = resNgay.recordset[0]?.['Ngày_Update'] ?? null;
+    const ngayUpdate = resNgay.recordset[0]?.['Ngay_Update'] ?? null;
     const quyenDL = resUser.recordset[0]?.Quyen_QL || '';
     const quyenUser = resUser.recordset[0]?.Quyen || '';
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       const parts = quyenDL.split(/[,-]/)
         .map((p: string) => p.replace(/["']/g, '').trim())
         .filter(Boolean);
-      
+
       // Lấy Khu vực TRỰC TIẾP từ Quyen_QL để đảm bảo đủ tỉnh
       khuVucList = [...new Set<string>(parts)].sort();
 

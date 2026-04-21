@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Spin, Tag, Select, Button, message, Checkbox, Typography, Tooltip, Modal, Table } from 'antd';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Spin, Tag, Select, Button, message, Checkbox, Typography, Tooltip, Modal } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
-import { DownloadOutlined, ReloadOutlined, FormOutlined, ArrowRightOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ReloadOutlined, FormOutlined, CheckCircleOutlined, ClockCircleOutlined, SendOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { THU_OPTIONS, THU_LIST, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, TAN_SUAT_OPTIONS } from '../../../../constants';
-import { getStoreData } from '../../../../utils/indexedDB';
 import { useCachedData } from '../../../../hooks/useCachedData';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface RecordType {
     ID: number;
@@ -25,7 +24,7 @@ const STORE_NAME = 'kh_kpsds';
 const CACHE_KEY = 'kh_kpsds_ngay_update';
 
 export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate: string, setNgayUpdate?: (d: string) => void }) {
-    const { data, loading, loadingText, reloadData, forceReload } = useCachedData<RecordType>({
+    const { data, loading, reloadData, forceReload } = useCachedData<RecordType>({
         storeName: STORE_NAME,
         cacheKey: CACHE_KEY,
         apiPath: '/api/khach-hang/kpsds',
@@ -33,9 +32,9 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
         setNgayUpdate
     });
 
+    const [pendingStatus, setPendingStatus] = useState<Record<string, { status: string, nvbh: string, thu: string, ts: string }>>({});
     const [selectedKhuVuc, setSelectedKhuVuc] = useState<string | undefined>();
     const [actionLoading, setActionLoading] = useState(false);
-    const [actionLoadingText, setActionLoadingText] = useState('');
     const [selectedNVBH, setSelectedNVBH] = useState<string | undefined>();
     const dayIdx = new Date().getDay(); // 0=CN, 1=T2...
     const todayThu = THU_LIST[(dayIdx + 6) % 7]; // Chuyển đổi để khớp với mảng T2 -> CN
@@ -44,16 +43,51 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
     const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
     const [changes, setChanges] = useState<Record<string, Partial<RecordType>>>({});
 
+    const [cachedKhuVuc, setCachedKhuVuc] = useState<string[]>([]);
+    const [cachedNVBH, setCachedNVBH] = useState<{ MA_TEN_NVBH: string, TEN_KHUVUC: string }[]>([]);
 
+    const fetchPendingStatus = useCallback(async () => {
+        try {
+            const { getCacheMeta } = await import('../../../../utils/indexedDB');
+            let quyenQL = (await getCacheMeta('common_quyen_dl')) || '';
+            if (!quyenQL) {
+                const userInfoStr = localStorage.getItem('user_info');
+                if (userInfoStr) {
+                    const userInfo = JSON.parse(userInfoStr);
+                    quyenQL = userInfo.quyenDL || '';
+                }
+            }
+            const res = await fetch(`/api/khach-hang/chinh-tuyen?quyen_dl=${encodeURIComponent(quyenQL)}&_t=${Date.now()}`);
+            const json = await res.json();
+            if (json.data) {
+                const map: Record<string, any> = {};
+                json.data.forEach((item: any) => {
+                    // Ưu tiên bản ghi mới nhất (vì đã ORDER BY DESC ở API)
+                    if (!map[item.Ma_KH]) {
+                        map[item.Ma_KH] = {
+                            status: item.Trang_thai_duyet,
+                            nvbh: item.Ma_ten_nvbh_MOI,
+                            thu: item.Thu_MOI,
+                            ts: item.Tan_suat_MOI
+                        };
+                    }
+                });
+                setPendingStatus(map);
+            }
+        } catch (e) {
+            console.error('Fetch pending status error:', e);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchPendingStatus();
+    }, [fetchPendingStatus]);
 
     const handleUpdate = (maKH: string, field: string, value: any, originalRecord: RecordType) => {
-        // Quy tắc: Thứ không được để trống
         if (field === 'Thứ' && (!value || value.length === 0)) return;
 
         setChanges(prev => {
             const currentChanges = { ...(prev[maKH] || {}), [field]: value };
-
-            // Logic Tần suất tự động & Khóa
             if (field === 'Thứ') {
                 const days = value.split(',').filter(Boolean);
                 const count = days.length;
@@ -61,7 +95,6 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                 else if (count === 1) currentChanges['Tần_Suất'] = 'F4';
             }
 
-            // Kiểm tra thực sự khác bản gốc
             const finalNVBH = currentChanges.Mã_Tên_NVBH || originalRecord.Mã_Tên_NVBH;
             const finalThu = currentChanges.Thứ !== undefined ? currentChanges.Thứ : originalRecord.Thứ;
             const finalTS = currentChanges.Tần_Suất || originalRecord.Tần_Suất;
@@ -83,15 +116,10 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                 delete newChanges[maKH];
                 return newChanges;
             }
-
             return { ...prev, [maKH]: currentChanges };
         });
     };
 
-    const [cachedKhuVuc, setCachedKhuVuc] = useState<string[]>([]);
-    const [cachedNVBH, setCachedNVBH] = useState<{ MA_TEN_NVBH: string, TEN_KHUVUC: string }[]>([]);
-
-    // Load danh mục từ Cache
     useEffect(() => {
         const loadCache = async () => {
             try {
@@ -99,21 +127,17 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                 const kv = await getCacheMeta('common_khuvuc');
                 const nv = await getCacheMeta('common_nvbh');
 
-                let firstKV = '';
                 if (kv) {
                     const kvData = JSON.parse(kv);
                     setCachedKhuVuc(kvData);
-                    if (kvData.length > 0 && !selectedKhuVuc) {
-                        firstKV = kvData[0];
-                        setSelectedKhuVuc(firstKV);
-                    }
+                    if (kvData.length > 0 && !selectedKhuVuc) setSelectedKhuVuc(kvData[0]);
                 }
 
                 if (nv) {
                     const nvData = JSON.parse(nv);
                     setCachedNVBH(nvData);
-                    if (firstKV && !selectedNVBH) {
-                        const firstNV = nvData.find((n: any) => n.TEN_KHUVUC === firstKV);
+                    if (cachedKhuVuc[0] && !selectedNVBH) {
+                        const firstNV = nvData.find((n: any) => n.TEN_KHUVUC === cachedKhuVuc[0]);
                         if (firstNV) setSelectedNVBH(firstNV.MA_TEN_NVBH);
                     }
                 }
@@ -122,7 +146,7 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
             }
         };
         loadCache();
-    }, []);
+    }, [cachedKhuVuc, selectedKhuVuc, selectedNVBH]);
 
     const filteredData = useMemo(() => {
         return data.filter(r => {
@@ -142,6 +166,21 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
             width: 250,
             align: 'left',
             render: (v, r) => {
+                const dbStatus = pendingStatus[r.Mã_KH];
+                if (dbStatus && dbStatus.status === 'Chờ duyệt') {
+                    return (
+                        <Tooltip title={`Chờ duyệt sang NVBH: ${dbStatus.nvbh}`}>
+                            <Tag color="orange" icon={<ClockCircleOutlined />}>Chờ duyệt</Tag>
+                        </Tooltip>
+                    );
+                }
+                if (dbStatus && dbStatus.status === 'Đã duyệt') {
+                    return (
+                        <Tooltip title={`Vừa duyệt sang NVBH: ${dbStatus.nvbh}`}>
+                            <Tag color="green" icon={<CheckCircleOutlined />}>Đã duyệt</Tag>
+                        </Tooltip>
+                    );
+                }
                 const currentVal = changes[r.Mã_KH]?.Mã_Tên_NVBH || v;
                 const options = cachedNVBH.filter(n => n.TEN_KHUVUC === r.Khu_Vực).map(n => ({ label: n.MA_TEN_NVBH, value: n.MA_TEN_NVBH }));
                 return (
@@ -180,6 +219,21 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
             width: 180,
             align: 'center',
             render: (v, r) => {
+                const dbStatus = pendingStatus[r.Mã_KH];
+                if (dbStatus && dbStatus.status === 'Chờ duyệt') {
+                    return (
+                        <Tooltip title={`Chờ duyệt sang Thứ: ${dbStatus.thu}`}>
+                            <Tag color="orange" icon={<ClockCircleOutlined />}>Chờ duyệt</Tag>
+                        </Tooltip>
+                    );
+                }
+                if (dbStatus && dbStatus.status === 'Đã duyệt') {
+                    return (
+                        <Tooltip title={`Vừa duyệt sang Thứ: ${dbStatus.thu}`}>
+                            <Tag color="green" icon={<CheckCircleOutlined />}>Đã duyệt</Tag>
+                        </Tooltip>
+                    );
+                }
                 const rowChanges = changes[r.Mã_KH] || {};
                 const rawVal = rowChanges.Thứ !== undefined ? rowChanges.Thứ : (v || '');
                 const currentVal = (rawVal as string).split(',').filter(Boolean);
@@ -190,19 +244,15 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                         style={{ width: '100%' }}
                         value={currentVal}
                         onChange={(newVals) => {
-                            if (newVals.length === 0) return; // Không cho phép để trống
-
+                            if (newVals.length === 0) return;
                             let finalVals = newVals;
                             const oldVals = (rawVal as string).split(',').filter(Boolean);
-
-                            // Logic: Lần đầu sẽ thay đổi (Replace)
                             if (rowChanges.Thứ === undefined && newVals.length === 2) {
                                 const added = newVals.find(x => !oldVals.includes(x));
                                 if (added) finalVals = [added];
                             } else {
-                                finalVals = newVals.slice(0, 2); // Tối đa 2
+                                finalVals = newVals.slice(0, 2);
                             }
-
                             handleUpdate(r.Mã_KH, 'Thứ', finalVals.join(','), r);
                         }}
                         options={THU_OPTIONS}
@@ -220,10 +270,24 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
             width: 120,
             align: 'center',
             render: (v, r) => {
+                const dbStatus = pendingStatus[r.Mã_KH];
+                if (dbStatus && dbStatus.status === 'Chờ duyệt') {
+                    return (
+                        <Tooltip title={`Chờ duyệt sang Tần suất: ${dbStatus.ts}`}>
+                            <Tag color="orange" icon={<ClockCircleOutlined />}>Chờ duyệt</Tag>
+                        </Tooltip>
+                    );
+                }
+                if (dbStatus && dbStatus.status === 'Đã duyệt') {
+                    return (
+                        <Tooltip title={`Vừa duyệt sang Tần suất: ${dbStatus.ts}`}>
+                            <Tag color="green" icon={<CheckCircleOutlined />}>Đã duyệt</Tag>
+                        </Tooltip>
+                    );
+                }
                 const rowChanges = changes[r.Mã_KH] || {};
                 const currentVal = rowChanges.Tần_Suất || v;
                 const thuCount = (rowChanges.Thứ !== undefined ? rowChanges.Thứ : (v || r.Thứ || '')).split(',').filter(Boolean).length;
-
                 return (
                     <Select
                         variant="borderless"
@@ -239,9 +303,78 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
         },
     ];
 
+    const handleReload = async () => {
+        const res = await forceReload();
+        if (res.updated) {
+            message.success('Đã làm mới dữ liệu thành công!');
+            await fetchPendingStatus();
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (selectedRowKeys.length === 0) {
+            message.warning('Hãy chọn khách hàng cần điều chỉnh tuyến');
+            return;
+        }
+
+        const selectedRows = filteredData.filter(r => selectedRowKeys.includes(r.Mã_KH));
+        const rowsToSend = selectedRows.map(r => {
+            const change = changes[r.Mã_KH] || {};
+            return {
+                Khu_vuc: r.Khu_Vực,
+                Ma_KH: r.Mã_KH,
+                Ten_KH: r.Tên_KH,
+                DC: r.Địa_Chỉ,
+                Ma_ten_nvbh_CU: r.Mã_Tên_NVBH,
+                Thu_CU: r.Thứ,
+                Tan_suat_CU: r.Tần_Suất,
+                Ma_ten_nvbh_MOI: change.Mã_Tên_NVBH || r.Mã_Tên_NVBH,
+                Thu_MOI: change.Thứ !== undefined ? change.Thứ : r.Thứ,
+                Tan_suat_MOI: change.Tần_Suất || r.Tần_Suất,
+            };
+        });
+
+        Modal.confirm({
+            title: 'Xác nhận gửi đăng ký',
+            content: `Bạn đang gửi yêu cầu điều chỉnh cho ${rowsToSend.length} khách hàng.`,
+            okText: 'Gửi ngay',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                setActionLoading(true);
+                try {
+                    let username = 'User';
+                    const userInfoStr = localStorage.getItem('user_info');
+                    if (userInfoStr) {
+                        const userInfo = JSON.parse(userInfoStr);
+                        username = userInfo.username || 'User';
+                    }
+
+                    const res = await fetch('/api/khach-hang/chinh-tuyen', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rows: rowsToSend, nguoi_dang_ky: username }),
+                    });
+
+                    const json = await res.json();
+                    if (json.success) {
+                        message.success('Đã gửi yêu cầu đăng ký thành công!');
+                        setChanges({});
+                        setSelectedRowKeys([]);
+                        await fetchPendingStatus();
+                    } else {
+                        message.error(json.error || 'Lỗi khi gửi yêu cầu');
+                    }
+                } catch (e) {
+                    message.error('Lỗi kết nối server');
+                } finally {
+                    setActionLoading(false);
+                }
+            }
+        });
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            {/* Filter Section */}
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
                 <div style={{ flex: 1, maxWidth: 250 }}>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
@@ -265,7 +398,6 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                         style={{ width: '100%' }}
                     />
                 </div>
-
                 <div style={{ width: 100 }}>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Thứ</div>
                     <Select
@@ -278,31 +410,26 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                     />
                 </div>
                 <div style={{ flex: 1 }}></div>
-                <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
+                <Button icon={<ReloadOutlined />} onClick={handleReload} loading={loading}>Tải lại</Button>
             </div>
 
-            <Spin spinning={loading || actionLoading} description={loadingText || actionLoadingText}>
+            <Spin spinning={loading || actionLoading}>
                 <CustomTable
                     columns={columns}
                     dataSource={filteredData}
                     rowKey="Mã_KH"
-                    rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+                    rowSelection={{
+                        selectedRowKeys,
+                        onChange: setSelectedRowKeys,
+                        getCheckboxProps: (r) => ({
+                            disabled: !!(pendingStatus[r.Mã_KH] && pendingStatus[r.Mã_KH].status === 'Chờ duyệt'),
+                        }),
+                    }}
                     onRow={(record) => ({
-                        onClick: (e) => {
-                            // Ngăn chặn việc xử lý nếu click vào các phần tử điều khiển (checkbox, select, v.v.)
-                            const target = e.target as HTMLElement;
-                            if (target.closest('.ant-table-selection-column') || target.closest('.ant-select') || target.closest('.ant-checkbox-wrapper')) {
-                                return;
-                            }
-
-                            const key = record.Mã_KH;
-                            setSelectedRowKeys(prev => {
-                                const exists = prev.includes(key);
-                                if (exists) return prev.filter(k => k !== key);
-                                return [...prev, key];
-                            });
+                        onClick: () => {
+                            if (pendingStatus[record.Mã_KH]?.status === 'Chờ duyệt') return;
                         },
-                        style: { cursor: 'pointer' }
+                        style: { cursor: (pendingStatus[record.Mã_KH]?.status === 'Chờ duyệt') ? 'default' : 'pointer' }
                     })}
                     pagination={{
                         pageSize,
@@ -314,130 +441,17 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                 />
             </Spin>
 
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div style={{ marginTop: 12 }}>
                 <Button
-                    icon={<FormOutlined />}
-                    style={selectedRowKeys.length > 0 ? { color: '#faad14', borderColor: '#faad14' } : {}}
-                    onClick={async () => {
-                        if (selectedRowKeys.length === 0) {
-                            message.warning('Hãy Tick chọn khách hàng cần điều chỉnh tuyến');
-                            return;
-                        }
-
-                        setActionLoading(true);
-                        setActionLoadingText('Đang kiểm tra dữ liệu...');
-
-                        try {
-                            // Tải danh sách đơn chờ duyệt để đối soát
-                            const resPending = await fetch('/api/khach-hang/chinh-tuyen/check', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ maKHs: selectedRowKeys })
-                            });
-                            const pendingList = await resPending.json();
-
-                            if (!Array.isArray(pendingList)) {
-                                message.error('Không thể kiểm tra trạng thái đơn cũ');
-                                setActionLoading(false);
-                                setActionLoadingText('');
-                                return;
-                            }
-
-                            const rowsSummary = selectedRowKeys.map(maKH => {
-                                const r = data.find(x => x.Mã_KH === maKH);
-                                if (!r) return null;
-                                const change = changes[maKH as string] || {};
-                                const isPending = pendingList.some(p => p.Ma_KH === maKH && p.Trang_thai_duyet === 'Chờ duyệt');
-
-                                return {
-                                    maKH: r.Mã_KH,
-                                    tenKH: r.Tên_KH,
-                                    tinhTrang: isPending ? 'Cập nhật' : 'Đăng ký mới',
-                                    nvbhMoi: change.Mã_Tên_NVBH || r.Mã_Tên_NVBH,
-                                    thuMoi: change.Thứ !== undefined ? change.Thứ : r.Thứ,
-                                    tsMoi: change.Tần_Suất || r.Tần_Suất,
-                                    original: r,
-                                    change: change
-                                };
-                            }).filter((x): x is any => x !== null);
-
-                            setActionLoading(false);
-                            setActionLoadingText('');
-
-                            Modal.confirm({
-                                title: 'Xác nhận gửi đăng ký điều chỉnh',
-                                width: 500,
-                                content: (
-                                    <div style={{ marginTop: 16, maxHeight: 400, overflowY: 'auto' }}>
-                                        <div style={{ marginBottom: 12 }}>Bạn đang thực hiện đăng ký cho <b>{rowsSummary.length}</b> khách hàng sau:</div>
-                                        {rowsSummary.map((r: any) => (
-                                            <div key={r.maKH} style={{ marginBottom: 6, fontSize: 13, display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f0f0f0', paddingBottom: 4 }}>
-                                                <span><b>{r.maKH}</b> - {r.tenKH}</span>
-                                                <Tag color={r.tinhTrang.includes('Cập nhật') ? 'orange' : 'green'} variant="filled" style={{ fontSize: 11 }}>{r.tinhTrang}</Tag>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ),
-                                okText: 'Xác nhận gửi',
-                                cancelText: 'Hủy',
-                                onOk: async () => {
-                                    setActionLoading(true);
-                                    setActionLoadingText('Đang gửi đăng ký...');
-                                    try {
-                                        let username = 'Admin';
-                                        const userInfoStr = localStorage.getItem('user_info');
-                                        if (userInfoStr) {
-                                            const userInfo = JSON.parse(userInfoStr);
-                                            username = userInfo.username || 'Admin';
-                                        }
-
-                                        const rowsToSend = rowsSummary.map((r: any) => ({
-                                            Khu_vuc: r.original.Khu_Vực,
-                                            Ma_KH: r.maKH,
-                                            Ten_KH: r.tenKH,
-                                            DC: r.original.Địa_Chỉ,
-                                            Ma_ten_nvbh_CU: r.original.Mã_Tên_NVBH,
-                                            Thu_CU: r.original.Thứ,
-                                            Tan_suat_CU: r.original.Tần_Suất,
-                                            Ma_ten_nvbh_MOI: r.nvbhMoi,
-                                            Thu_MOI: r.thuMoi,
-                                            Tan_suat_MOI: r.tsMoi,
-                                        }));
-
-                                        const res = await fetch('/api/khach-hang/chinh-tuyen', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ rows: rowsToSend, nguoi_dang_ky: username }),
-                                        });
-
-                                        const json = await res.json();
-                                        if (json.success) {
-                                            message.success('Đã gửi yêu cầu đăng ký điều chỉnh tuyến');
-                                            setChanges({});
-                                            setSelectedRowKeys([]);
-                                        } else {
-                                            message.error(json.error || 'Lỗi khi gửi đăng ký');
-                                        }
-                                    } catch (e) {
-                                        console.error('Submit error:', e);
-                                        message.error('Lỗi kết nối Server');
-                                    } finally {
-                                        setActionLoading(false);
-                                        setActionLoadingText('');
-                                    }
-                                }
-                            });
-                        } catch (e) {
-                            console.error('Check error:', e);
-                            message.error('Lỗi khi kiểm tra dữ liệu cũ');
-                            setActionLoading(false);
-                            setActionLoadingText('');
-                        }
-                    }}
+                    type="primary"
+                    icon={<SendOutlined />}
+                    disabled={selectedRowKeys.length === 0}
+                    onClick={handleSubmit}
+                    loading={actionLoading}
+                    style={{ backgroundColor: selectedRowKeys.length > 0 ? '#722ed1' : undefined }}
                 >
-                    Đăng ký điều chỉnh ({selectedRowKeys.length})
+                    Gửi yêu cầu điều chỉnh {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
                 </Button>
-
             </div>
         </div>
     );

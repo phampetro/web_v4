@@ -78,7 +78,7 @@ export default function SanPhamModule() {
           return;
         }
       }
-      const res = await fetch('/api/cau-hinh/san-pham');
+      const res = await fetch('/api/bao-cao-bao-phu/san-pham');
       const json = await res.json();
       if (json.allProducts) {
         setAllProducts(json.allProducts);
@@ -129,7 +129,7 @@ export default function SanPhamModule() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/cau-hinh/san-pham', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ products: selectedProducts }) });
+      const res = await fetch('/api/bao-cao-bao-phu/san-pham', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ products: selectedProducts }) });
       const json = await res.json();
       if (json.success) {
         message.success('Lưu cấu hình thành công');

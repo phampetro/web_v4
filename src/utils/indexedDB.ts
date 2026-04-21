@@ -1,5 +1,5 @@
 const DB_NAME = 'DMS_Report_Cache';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -24,6 +24,9 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('common_categories')) {
         db.createObjectStore('common_categories', { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains('kh_cho_pho')) {
+        db.createObjectStore('kh_cho_pho', { autoIncrement: true });
       }
     };
     request.onsuccess = () => resolve(request.result);

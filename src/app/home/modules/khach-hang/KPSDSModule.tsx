@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Spin, Tag, Select, Button, Modal, message, Checkbox, Typography, Tooltip } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
-import { DownloadOutlined, PauseCircleOutlined, CameraOutlined, SendOutlined, ReloadOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PauseCircleOutlined, CameraOutlined, SendOutlined, ReloadOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getCookie } from '../../../../utils/cookie';
 import * as ExcelJS from 'exceljs';
@@ -30,40 +30,8 @@ interface KHRecord {
 const STORE_NAME = 'kh_kpsds';
 const CACHE_KEY = 'kh_kpsds_ngay_update';
 
-const columns: ColumnsType<KHRecord> = [
-  { title: 'STT', key: 'stt', width: 45, align: 'center', render: (_v, _r, index) => index + 1 },
-  { title: 'NVBH', dataIndex: 'Mã_Tên_NVBH', key: 'Mã_Tên_NVBH', width: 210, align: 'left' },
-  {
-    title: 'Khách hàng',
-    key: 'khach_hang',
-    width: 210,
-    align: 'left',
-    render: (_, r) => (
-      <Tooltip title={`${r.Mã_KH} - ${r.Tên_KH}`} mouseEnterDelay={0.5}>
-        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          <Text strong style={{ color: '#1677ff', fontSize: 13, marginRight: 4 }}>{r.Mã_KH}</Text>
-          <Text style={{ fontSize: 13 }}> - {r.Tên_KH}</Text>
-        </div>
-      </Tooltip>
-    )
-  },
-  { title: 'Địa chỉ', dataIndex: 'Địa_Chỉ', key: 'Địa_Chỉ', width: 220, align: 'left' },
-  { title: 'Thứ', dataIndex: 'Thứ', key: 'Thứ', width: 40, align: 'center' },
-  { title: 'Tần suất', dataIndex: 'Tần_Suất', key: 'Tần_Suất', width: 75, align: 'center', render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-' },
-  { title: 'Trưng bày', dataIndex: 'Trưng_Bày', key: 'Trưng_Bày', width: 100, align: 'center' },
-  {
-    title: 'Ngày ĐH Cuối', dataIndex: 'Ngày_ĐH_Cuối', key: 'Ngày_ĐH_Cuối', width: 100, align: 'center',
-    render: (v: string | null) => {
-      if (!v) return '-';
-      const d = new Date(v);
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    },
-  },
-  { title: 'Khu vực', dataIndex: 'Khu_Vực', key: 'Khu_Vực', width: 80, align: 'center' },
-];
-
 export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate: string, setNgayUpdate?: (d: string) => void }) {
-  const { data, loading, loadingText, reloadData, forceReload } = useCachedData<KHRecord>({
+  const { data, loading, reloadData: reloadBase } = useCachedData<KHRecord>({
     storeName: STORE_NAME,
     cacheKey: CACHE_KEY,
     apiPath: '/api/khach-hang/kpsds',
@@ -71,6 +39,7 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
     setNgayUpdate
   });
 
+  const [pendingStatus, setPendingStatus] = useState<Record<string, string>>({});
   const [selectedKhuVuc, setSelectedKhuVuc] = useState<string | undefined>();
   const [selectedNVBH, setSelectedNVBH] = useState<string | undefined>();
   const [selectedKH, setSelectedKH] = useState<string | undefined>();
@@ -91,7 +60,37 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
   const [cachedKhuVuc, setCachedKhuVuc] = useState<string[]>([]);
   const [cachedNVBH, setCachedNVBH] = useState<{ MA_TEN_NVBH: string, TEN_KHUVUC: string }[]>([]);
 
-  // Đọc danh mục từ Cache IndexedDB
+  const fetchPendingStatus = useCallback(async () => {
+    try {
+      const { getCacheMeta } = await import('../../../../utils/indexedDB');
+      let quyenQL = (await getCacheMeta('common_quyen_dl')) || '';
+      if (!quyenQL) {
+        const userInfoStr = localStorage.getItem('user_info');
+        if (userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          quyenQL = userInfo.quyenDL || '';
+        }
+      }
+      const res = await fetch(`/api/khach-hang/tam-ngung?quyen_dl=${encodeURIComponent(quyenQL)}&_t=${Date.now()}`);
+      const json = await res.json();
+      if (json.data) {
+        const map: Record<string, string> = {};
+        json.data.forEach((item: any) => {
+          if (item.Trang_thai_duyet === 'Chờ duyệt' || item.Trang_thai_duyet === 'Đã duyệt') {
+            map[item.Ma_KH] = item.Trang_thai_duyet;
+          }
+        });
+        setPendingStatus(map);
+      }
+    } catch (e) {
+      console.error('Fetch pending status error:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingStatus();
+  }, [fetchPendingStatus]);
+
   useEffect(() => {
     const loadCache = async () => {
       try {
@@ -107,7 +106,35 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
     loadCache();
   }, []);
 
-
+  const columns: ColumnsType<KHRecord> = [
+    { title: 'STT', key: 'stt', width: 45, align: 'center', render: (_, __, i) => i + 1 },
+    { title: 'NVBH', dataIndex: 'Mã_Tên_NVBH', key: 'Mã_Tên_NVBH', width: 210, align: 'left' },
+    {
+      title: 'Khách hàng', key: 'kh', width: 200, align: 'left',
+      render: (_, r) => (
+        <Tooltip title={`${r.Mã_KH} - ${r.Tên_KH}`} mouseEnterDelay={0.5}>
+          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Text strong style={{ color: '#1677ff', fontSize: 13, marginRight: 4 }}>{r.Mã_KH}</Text>
+            <Text style={{ fontSize: 12 }}> - {r.Tên_KH}</Text>
+          </div>
+        </Tooltip>
+      )
+    },
+    { title: 'Địa chỉ', dataIndex: 'Địa_Chỉ', key: 'Địa_Chỉ', width: 250, align: 'left' },
+    { title: 'Thứ', dataIndex: 'Thứ', key: 'Thứ', width: 40, align: 'center' },
+    { title: 'Tần suất', dataIndex: 'Tần_Suất', key: 'Tần_Suất', width: 75, align: 'center' },
+    {
+      title: 'Tạm ngưng', key: 'trang_thai', width: 80, align: 'center',
+      render: (_, r) => {
+        const status = pendingStatus[r.Mã_KH];
+        if (status === 'Chờ duyệt') return <Tag color="orange" icon={<ClockCircleOutlined />}>Chờ duyệt</Tag>;
+        if (status === 'Đã duyệt') return <Tag color="green" icon={<CheckCircleOutlined />}>Đã duyệt</Tag>;
+        return null;
+      }
+    },
+    { title: 'Trưng bày', dataIndex: 'Trưng_Bày', key: 'Trưng_Bày', width: 100, align: 'center' },
+    { title: 'Khu vực', dataIndex: 'Khu_Vực', key: 'Khu_Vực', width: 80, align: 'center' },
+  ];
 
   const khuVucOptions = useMemo(() => {
     const list = cachedKhuVuc.length > 0 ? cachedKhuVuc : [...new Set(data.map((r) => r.Khu_Vực).filter(Boolean))].sort();
@@ -115,22 +142,12 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
   }, [data, cachedKhuVuc]);
 
   const nvbhOptions = useMemo(() => {
-    // Nếu có cache từ API dùng chung, ưu tiên sử dụng để đảm bảo quan hệ cha-con
     if (cachedNVBH.length > 0) {
       let filtered = cachedNVBH;
-      if (selectedKhuVuc) {
-        filtered = cachedNVBH.filter(n => n.TEN_KHUVUC === selectedKhuVuc);
-      }
+      if (selectedKhuVuc) filtered = cachedNVBH.filter(n => n.TEN_KHUVUC === selectedKhuVuc);
       return filtered.map(n => ({ label: n.MA_TEN_NVBH, value: n.MA_TEN_NVBH }));
     }
-
-    // Fallback: Nếu cache trống, lấy từ data hiện tại
-    let list: string[] = [];
-    if (selectedKhuVuc) {
-      list = [...new Set(data.filter(r => r.Khu_Vực === selectedKhuVuc).map(r => r.Mã_Tên_NVBH).filter(Boolean))].sort();
-    } else {
-      list = [...new Set(data.map(r => r.Mã_Tên_NVBH).filter(Boolean))].sort();
-    }
+    let list: string[] = selectedKhuVuc ? [...new Set(data.filter(r => r.Khu_Vực === selectedKhuVuc).map(r => r.Mã_Tên_NVBH).filter(Boolean))].sort() : [...new Set(data.map(r => r.Mã_Tên_NVBH).filter(Boolean))].sort();
     return list.map((v) => ({ label: v, value: v }));
   }, [data, selectedKhuVuc, cachedNVBH]);
 
@@ -308,6 +325,24 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
     }
   };
 
+  const handleReload = async () => {
+    try {
+      const res = await reloadBase();
+      if (res?.updated) {
+        message.success({ content: 'Đã tải mới dữ liệu thành công!' });
+      } else {
+        const { CheckCircleOutlined } = await import('@ant-design/icons');
+        message.success({
+          content: 'Dữ liệu đang là mới nhất.',
+          icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
+        });
+      }
+      await fetchPendingStatus();
+    } catch (err) {
+      message.error({ content: 'Lỗi khi đồng bộ dữ liệu', key: 'reload' });
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
@@ -334,17 +369,24 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
         <div style={{ whiteSpace: 'nowrap', paddingBottom: 6 }}>
           <Checkbox checked={showAllKH} onChange={e => setShowAllKH(e.target.checked)}>Tất cả KH</Checkbox>
         </div>
-        <Button icon={<ReloadOutlined />} onClick={forceReload} loading={loading}>Tải lại</Button>
+        <Button icon={<ReloadOutlined />} onClick={handleReload} loading={loading}>Tải lại</Button>
       </div>
 
-      <Spin spinning={loading} description={loadingText}>
+      <Spin spinning={loading}>
         <CustomTable
           columns={columns}
           dataSource={filteredData}
           rowKey={(r) => r.Mã_KH}
-          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+            getCheckboxProps: (r) => ({
+              disabled: !!pendingStatus[r.Mã_KH],
+            })
+          }}
           onRow={(record) => ({
             onClick: () => {
+              if (pendingStatus[record.Mã_KH]) return;
               const key = record.Mã_KH;
               const newKeys = [...selectedRowKeys];
               const idx = newKeys.indexOf(key);
@@ -352,7 +394,7 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
               else newKeys.push(key);
               setSelectedRowKeys(newKeys);
             },
-            style: { cursor: 'pointer' }
+            style: { cursor: pendingStatus[record.Mã_KH] ? 'default' : 'pointer' }
           })}
           pagination={{
             pageSize,
@@ -393,109 +435,37 @@ export default function KPSDSModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate:
 
             setSubmittingApproval(true);
             try {
-              // 1. Kiểm tra trạng thái hiện tại từ Server
-              const resCheck = await fetch('/api/khach-hang/tam-ngung/check', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ maKHs: selectedRowKeys })
-              });
-              const pendingList = await resCheck.json();
-
-              if (!Array.isArray(pendingList)) {
-                message.error('Không thể kiểm tra trạng thái đơn cũ');
-                setSubmittingApproval(false);
-                return;
+              let username = '';
+              const userInfoStr = localStorage.getItem('user_info');
+              if (userInfoStr) {
+                const userInfo = JSON.parse(userInfoStr);
+                username = userInfo.username || '';
               }
 
-              const summary = selected.map(r => {
-                const existing = pendingList.find((p: any) => p.Ma_KH === r.Mã_KH);
-                let status = 'Đăng ký mới';
-                let color = 'green';
-                let isPending = false;
+              const rows = selected.map(r => ({
+                Khu_vuc: r.Khu_Vực,
+                Ma_ten_nvbh: r.Mã_Tên_NVBH,
+                Ma_KH: r.Mã_KH,
+                Ten_KH: r.Tên_KH,
+                DC: r.Địa_Chỉ,
+                Thu: r.Thứ,
+                Tan_suat: r.Tần_Suất
+              }));
 
-                if (existing) {
-                  if (existing.Trang_thai_duyet === 'Từ chối') {
-                    status = 'Gửi lại (Bị từ chối trước đó)';
-                    color = 'orange';
-                  } else {
-                    status = `Đã gửi yêu cầu (${existing.Trang_thai_duyet})`;
-                    color = 'blue';
-                    isPending = true;
-                  }
-                }
-                return { mãKH: r.Mã_KH, tênKH: r.Tên_KH, status, color, isPending, original: r };
+              const res = await fetch('/api/khach-hang/tam-ngung', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rows, nguoi_dang_ky: username })
               });
-
-              setSubmittingApproval(false);
-
-              Modal.confirm({
-                title: 'Xác nhận gửi đăng ký Tạm ngưng',
-                width: 500,
-                content: (
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ marginBottom: 12 }}>Bạn đang gửi đăng ký cho <b>{summary.length}</b> khách hàng sau:</div>
-                    <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: 4, padding: 8 }}>
-                      {summary.map(s => (
-                        <div key={s.mãKH} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, borderBottom: '1px solid #fafafa', paddingBottom: 4 }}>
-                          <span style={{ fontSize: 13 }}><b>{s.mãKH}</b> - {s.tênKH}</span>
-                          <Tag color={s.color} variant="filled" style={{ fontSize: 11 }}>{s.status}</Tag>
-                        </div>
-                      ))}
-                    </div>
-                    {summary.some(s => s.isPending) && (
-                      <div style={{ marginTop: 12, color: '#fa8c16', fontSize: 12, fontStyle: 'italic' }}>
-                        * Lưu ý: Những khách hàng "Đã gửi yêu cầu" sẽ được hệ thống bỏ qua để tránh gửi trùng lặp.
-                      </div>
-                    )}
-                  </div>
-                ),
-                okText: 'Xác nhận gửi ngay',
-                cancelText: 'Hủy',
-                onOk: async () => {
-                  setSubmittingApproval(true);
-                  try {
-                    let username = '';
-                    const userInfoStr = localStorage.getItem('user_info');
-                    if (userInfoStr) {
-                      const userInfo = JSON.parse(userInfoStr);
-                      username = userInfo.username || '';
-                    }
-
-                    const rows = summary.filter(s => !s.isPending).map(s => ({
-                      Khu_vuc: s.original.Khu_Vực,
-                      Ma_ten_nvbh: s.original.Mã_Tên_NVBH,
-                      Ma_KH: s.mãKH,
-                      Ten_KH: s.tênKH,
-                      DC: s.original.Địa_Chỉ,
-                      Thu: s.original.Thứ,
-                      Tan_suat: s.original.Tần_Suất
-                    }));
-
-                    if (rows.length === 0) {
-                      message.warning('Không có khách hàng nào hợp lệ để gửi mới');
-                      return;
-                    }
-
-                    const res = await fetch('/api/khach-hang/tam-ngung', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ rows, nguoi_dang_ky: username })
-                    });
-                    const json = await res.json();
-                    if (json.success) {
-                      message.success(`Đã gửi yêu cầu cho ${json.inserted + json.updated} khách hàng!`);
-                      setSelectedRowKeys([]);
-                      setTamNgungModalOpen(false);
-                    } else message.error(json.error);
-                  } catch { message.error('Lỗi kết nối khi gửi dữ liệu'); } finally { setSubmittingApproval(false); }
-                }
-              });
-            } catch (e) {
-              console.error('Check TN error:', e);
-              message.error('Lỗi khi kiểm tra dữ liệu');
-              setSubmittingApproval(false);
-            }
-          }}>Gửi Manager duyệt TN</Button>
+              const json = await res.json();
+              if (json.success) {
+                message.success(`Đã gửi yêu cầu cho ${json.inserted + json.updated} khách hàng!`);
+                setSelectedRowKeys([]);
+                setTamNgungModalOpen(false);
+                await fetchPendingStatus(); // Cập nhật lại trạng thái ngay lập tức
+              } else message.error(json.error);
+            } catch { message.error('Lỗi kết nối khi gửi dữ liệu'); } finally { setSubmittingApproval(false); }
+          }}>Gửi yêu cầu</Button>
         ]}
       >
         <p>Bạn đã chọn <b>{selectedRowKeys.length}</b> khách hàng để đăng ký tạm ngưng.</p>
