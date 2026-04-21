@@ -15,6 +15,7 @@ interface RawRecord {
   Khu_Vực: string;
   Thứ: string;
   Tần_Suất: string;
+  TRENDUONG_TRONGCHO?: string;
 }
 
 interface SummaryRecord {
@@ -27,7 +28,7 @@ interface SummaryRecord {
 
 export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate: string, setNgayUpdate?: (d: string) => void }) {
   // Sử dụng lại cache kh_kpsds từ KPSDSModule
-  const { data, loading, loadingText, forceReload } = useCachedData<RawRecord>({
+  const { data, loading, forceReload } = useCachedData<RawRecord>({
     storeName: 'kh_kpsds',
     cacheKey: 'kh_kpsds_ngay_update',
     apiPath: '/api/khach-hang/kpsds',
@@ -38,14 +39,23 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
   const [selectedKhuVuc, setSelectedKhuVuc] = useState<string | undefined>();
   const [cachedKhuVuc, setCachedKhuVuc] = useState<string[]>([]);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [choPhoMap, setChoPhoMap] = useState<Record<string, string>>({});
 
   // Load danh mục Khu vực từ Metadata dùng chung
   useEffect(() => {
     const loadCache = async () => {
       try {
-        const { getCacheMeta } = await import('../../../../utils/indexedDB');
+        const { getCacheMeta, getStoreData } = await import('../../../../utils/indexedDB');
         const kv = await getCacheMeta('common_khuvuc');
         if (kv) setCachedKhuVuc(JSON.parse(kv));
+
+        // Load map Chợ Phố để tham chiếu
+        const cpData = await getStoreData<{ MA_KH: string, TRENDUONG_TRONGCHO: string }>('kh_cho_pho');
+        if (cpData.length > 0) {
+          const map: Record<string, string> = {};
+          cpData.forEach(i => map[i.MA_KH] = i.TRENDUONG_TRONGCHO);
+          setChoPhoMap(map);
+        }
       } catch (e) {
         console.error('Load filter cache error:', e);
       }
@@ -75,7 +85,7 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
           khSet: new Set(),
         };
         days.forEach(d => {
-          groups[key][d] = { total: 0, details: {} as Record<string, number> };
+          groups[key][d] = { total: 0, marketCount: 0, details: {} as Record<string, number> };
         });
       }
 
@@ -89,6 +99,12 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
         if (thuStr.includes(label)) {
           g[key].total++;
           g[key].details[tanSuat] = (g[key].details[tanSuat] || 0) + 1;
+          
+          // Kiểm tra khách này có phải là khách Trong chợ không (ưu tiên thuộc tính đi kèm bản ghi, nếu ko có thì tra map)
+          const isTrongCho = (r.TRENDUONG_TRONGCHO === 'Trong chợ') || (choPhoMap[r.Mã_KH] === 'Trong chợ');
+          if (isTrongCho) {
+            g[key].marketCount++;
+          }
         }
       });
     });
@@ -100,8 +116,14 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
   }, [data, selectedKhuVuc]);
 
   const getCellProps = (val: any) => {
-    const num = typeof val === 'object' ? val.total : val;
-    if (num > 0 && num < 30) {
+    const total = val?.total || 0;
+    if (total === 0) return {};
+    
+    const marketCount = val?.marketCount || 0;
+    const isMarket = total > 0 && (marketCount / total >= 0.5);
+    const threshold = isMarket ? 36 : 32;
+
+    if (total < threshold) {
       return { style: { backgroundColor: '#fff1f0', fontWeight: 'bold' } };
     }
     return {};
@@ -109,8 +131,13 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
 
   const renderCount = (val: any) => {
     const total = val?.total || 0;
+    const marketCount = val?.marketCount || 0;
     if (total === 0) return <Text type="secondary">-</Text>;
 
+    const isMarket = marketCount / total >= 0.5;
+    const typeLabel = isMarket ? '[C]' : '[P]';
+    const threshold = isMarket ? 36 : 32;
+    const isRed = total < threshold;
     // Tạo nội dung cho Tooltip
     const tooltipContent = (
       <div style={{ padding: '4px' }}>
@@ -129,16 +156,24 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
               </div>
             );
           })}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.3)', marginTop: '4px', paddingTop: '2px', textAlign: 'right' }}>
-          Tổng: <b>{total}</b>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.3)', marginTop: '4px', paddingTop: '2px', fontSize: '11px' }}>
+          <div>Tỷ lệ Chợ: <b>{Math.round((marketCount/total)*100)}%</b> ({marketCount}/{total})</div>
+          <div>Loại tuyến: <b>{isMarket ? 'Chợ (Y/c >= 36)' : 'Phố (Y/c >= 32)'}</b></div>
         </div>
       </div>
     );
 
     return (
       <Tooltip title={tooltipContent} color="#262626">
-        <Text strong style={{ color: total < 30 ? '#cf1322' : '#0958d9', cursor: 'help' }}>
-          {total}
+        <Text strong style={{ 
+          color: isRed ? '#cf1322' : '#0958d9', 
+          cursor: 'help',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '2px'
+        }}>
+          {total} <span style={{ fontSize: '10px', opacity: 0.7 }}>{typeLabel}</span>
         </Text>
       </Tooltip>
     );
@@ -185,7 +220,7 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
       </div>
 
       {/* Bảng tổng hợp Pivot */}
-      <Spin spinning={loading} description={loadingText}>
+      <Spin spinning={loading} description="Đang tải dữ liệu...">
         <CustomTable
           columns={columns}
           dataSource={summaryData}
