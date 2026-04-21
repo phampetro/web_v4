@@ -122,7 +122,7 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
     if (total === 0) return {};
     
     const marketCount = val?.marketCount || 0;
-    const isMarket = total > 0 && (marketCount / total >= 0.5);
+    const isMarket = marketCount >= 1;
     const threshold = isMarket ? 36 : 32;
 
     if (total < threshold) {
@@ -136,7 +136,7 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
     const marketCount = val?.marketCount || 0;
     if (total === 0) return <Text type="secondary">-</Text>;
 
-    const isMarket = marketCount / total >= 0.5;
+    const isMarket = marketCount >= 1;
     const typeLabel = isMarket ? '[C]' : '[P]';
     const threshold = isMarket ? 36 : 32;
     const isRed = total < threshold;
