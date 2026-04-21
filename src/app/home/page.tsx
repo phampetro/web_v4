@@ -22,12 +22,13 @@ import {
   NodeIndexOutlined,
   SolutionOutlined,
   ShopOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { setCookie, getCookie, clearAllCookies } from '../../utils/cookie';
 import { useRouter } from 'next/navigation';
 import {
-  Layout, Menu, Avatar, Typography, Dropdown, Button, theme, Space, Modal, Form, Input, message,
+  Layout, Menu, Avatar, Typography, Dropdown, Button, theme, Space, Modal, Form, Input, message, Flex,
 } from 'antd';
 
 import DashboardModule from './modules/dashboard/DashboardModule';
@@ -434,17 +435,18 @@ export default function HomePage() {
               <Dropdown menu={{ items: userDropdownItems }} placement="topRight" trigger={['click']}>
                 <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Avatar style={{ backgroundColor: '#1677ff' }} icon={<UserOutlined />} />
-                  <div style={{
+                  <Flex align="center" gap={4} style={{
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',
-                    maxWidth: collapsed ? 0 : 120,
+                    maxWidth: collapsed ? 0 : 150,
                     opacity: collapsed ? 0 : 1,
                     transition: 'max-width 0.2s ease, opacity 0.2s ease',
                   }}>
-                    <Typography.Text strong style={{ display: 'block', lineHeight: 1.3, fontSize: 13 }}>
+                    <Typography.Text strong style={{ fontSize: 13 }}>
                       {username || 'Người dùng'}
                     </Typography.Text>
-                  </div>
+                    <DownOutlined style={{ fontSize: 10, color: token.colorTextDescription }} />
+                  </Flex>
                 </div>
               </Dropdown>
             </div>
