@@ -131,6 +131,7 @@ export default function HomePage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [ngayUpdate, setNgayUpdate] = useState<string>('');
   const [ngayUpdateLoading, setNgayUpdateLoading] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // 1. Khai báo hàm fetchNgayUpdate (Full Init/Refresh)
   const fetchNgayUpdate = async (userParam?: string) => {
@@ -432,20 +433,31 @@ export default function HomePage() {
               alignItems: 'center',
               flexShrink: 0,
             }}>
-              <Dropdown menu={{ items: userDropdownItems }} placement="topRight" trigger={['click']}>
-                <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Dropdown 
+                menu={{ items: userDropdownItems }} 
+                placement="topRight" 
+                trigger={['click']}
+                onOpenChange={setUserDropdownOpen}
+              >
+                <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
                   <Avatar style={{ backgroundColor: '#1677ff' }} icon={<UserOutlined />} />
-                  <Flex align="center" gap={4} style={{
+                  <Flex justify="space-between" align="center" style={{
+                    flex: 1,
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',
-                    maxWidth: collapsed ? 0 : 150,
+                    maxWidth: collapsed ? 0 : 180,
                     opacity: collapsed ? 0 : 1,
                     transition: 'max-width 0.2s ease, opacity 0.2s ease',
                   }}>
                     <Typography.Text strong style={{ fontSize: 13 }}>
                       {username || 'Người dùng'}
                     </Typography.Text>
-                    <DownOutlined style={{ fontSize: 10, color: token.colorTextDescription }} />
+                    <DownOutlined style={{ 
+                      fontSize: 10, 
+                      color: token.colorTextDescription,
+                      transition: 'transform 0.3s',
+                      transform: userDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }} />
                   </Flex>
                 </div>
               </Dropdown>
