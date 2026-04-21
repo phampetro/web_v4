@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Spin, Tag, Select, Button, Modal, message, Typography, Tooltip } from 'antd';
+import { Spin, Tag, Select, Button, Modal, message, Typography, Tooltip, Flex } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
 import { ArrowRightOutlined, CheckCircleOutlined, DownloadOutlined, ReloadOutlined, SendOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -424,27 +424,27 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
   const isLoading = loadingBase || loadingCP;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+    <Flex vertical gap={12} style={{ height: '100%', overflow: 'hidden' }}>
+      <Flex gap={12} align="end" style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ flex: 1, minWidth: 120 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Khu vực</Text>
           <Select placeholder="Tất cả" value={selectedKhuVuc} onChange={v => { setSelectedKhuVuc(v); setSelectedNVBH(undefined); setSelectedKH(undefined); }} allowClear showSearch options={khuVucOptions} style={{ width: '100%' }} />
         </div>
         <div style={{ flex: 1.2, minWidth: 150 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>NVBH</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>NVBH</Text>
           <Select placeholder="Tất cả" value={selectedNVBH} onChange={v => { setSelectedNVBH(v); setSelectedKH(undefined); }} allowClear showSearch options={nvbhOptions} style={{ width: '100%' }} />
         </div>
         <div style={{ flex: 2, minWidth: 250 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Mã - Tên KH</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Mã - Tên KH</Text>
           <Select placeholder="Tìm kiếm..." value={selectedKH} onChange={setSelectedKH} allowClear showSearch options={khOptions} style={{ width: '100%' }} />
         </div>
         <div style={{ flex: 0.8, minWidth: 100 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Thứ</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Thứ</Text>
           <Select mode="multiple" placeholder="Tất cả" value={selectedThu} onChange={setSelectedThu} allowClear options={THU_OPTIONS} style={{ width: '100%' }} maxTagCount="responsive" />
         </div>
 
         <Button icon={<ReloadOutlined />} onClick={handleReload} loading={isLoading}>Tải lại</Button>
-      </div>
+      </Flex>
 
       <Spin spinning={isLoading}>
         <CustomTable
@@ -476,7 +476,7 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
         />
       </Spin>
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+      <Flex gap={8} style={{ marginTop: 12 }}>
         <Button icon={<DownloadOutlined />} onClick={() => exportExcel(filteredData)} disabled={filteredData.length === 0} loading={exporting}>Xuất Excel</Button>
         <Button
           type="primary"
@@ -492,7 +492,7 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
         >
           Gửi yêu cầu {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

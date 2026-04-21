@@ -35,8 +35,13 @@ export function useCachedData<T>({
           quyenQL = userInfo.quyenDL || '';
         }
       }
-      const separator = apiPath.includes('?') ? '&' : '?';
-      const res = await fetch(`${apiPath}${separator}quyen_dl=${encodeURIComponent(quyenQL)}`);
+
+      // Chuyển sang dùng POST để gửi Body (Tránh lỗi URL quá dài)
+      const res = await fetch(apiPath, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quyen_dl: quyenQL })
+      });
       const json = await res.json();
       
       if (json.data) {
@@ -72,7 +77,12 @@ export function useCachedData<T>({
         }
       }
 
-      const res = await fetch(`${apiPath}?quyen_dl=${encodeURIComponent(quyenQL)}&checkOnly=true`);
+      // Kiểm tra phiên bản dùng POST
+      const res = await fetch(apiPath, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quyen_dl: quyenQL, checkOnly: true })
+      });
       const json = await res.json();
 
       const serverNgayUpdate = json.ngayUpdate;

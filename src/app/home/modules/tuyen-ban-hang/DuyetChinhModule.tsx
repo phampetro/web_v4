@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Spin, Tag, Select, Button, message, Typography, Tooltip, Modal, notification } from 'antd';
+import { Spin, Tag, Select, Button, message, Typography, Tooltip, Modal, notification, Flex } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
 import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, DownloadOutlined, ExclamationCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -81,7 +81,11 @@ export default function DuyetChinhModule() {
         }
       }
 
-      const res = await fetch(`/api/khach-hang/chinh-tuyen?quyen_dl=${encodeURIComponent(quyenQL)}&_t=${Date.now()}`);
+      const res = await fetch('/api/khach-hang/chinh-tuyen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quyen_dl: quyenQL })
+      });
       const json = await res.json();
       if (json.data) setData(json.data);
     } catch (e) {
@@ -272,10 +276,10 @@ export default function DuyetChinhModule() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+    <Flex vertical gap={12} style={{ height: '100%', overflow: 'hidden' }}>
+      <Flex gap={12} align="end" style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ flex: 1, maxWidth: 200 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Khu vực</Text>
           <Select
             placeholder="Tất cả"
             value={selectedKhuVuc}
@@ -286,7 +290,7 @@ export default function DuyetChinhModule() {
           />
         </div>
         <div style={{ flex: 1, maxWidth: 220 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>NVBH</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>NVBH</Text>
           <Select
             placeholder="Tất cả"
             value={selectedNVBH}
@@ -297,7 +301,7 @@ export default function DuyetChinhModule() {
           />
         </div>
         <div style={{ width: 90 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Thứ</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Thứ</Text>
           <Select
             placeholder="Tất cả"
             value={selectedThu}
@@ -308,7 +312,7 @@ export default function DuyetChinhModule() {
           />
         </div>
         <div style={{ width: 120 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Trạng thái</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Trạng thái</Text>
           <Select
             placeholder="Tất cả"
             value={selectedTrangThai}
@@ -320,7 +324,7 @@ export default function DuyetChinhModule() {
         </div>
         <div style={{ flex: 1 }}></div>
         <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>Tải lại</Button>
-      </div>
+      </Flex>
 
       <Spin spinning={loading} description={loadingText} classNames={{ root: "flex-1 overflow-hidden" }}>
         <CustomTable
@@ -354,7 +358,7 @@ export default function DuyetChinhModule() {
         />
       </Spin>
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+      <Flex gap={8} style={{ marginTop: 12 }}>
         <Button
           danger
           icon={<DeleteOutlined />}
@@ -383,7 +387,7 @@ export default function DuyetChinhModule() {
         >
           Duyệt ({selectedRowKeys.length})
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

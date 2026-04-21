@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Spin, Tag, Select, Button, message, Typography, Tooltip, Modal, notification } from 'antd';
+import { Spin, Tag, Select, Button, message, Typography, Tooltip, Modal, notification, Flex } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
 import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, ExclamationCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -283,24 +283,24 @@ export default function DuyetChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayU
     },
   ];
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
-        <div style={{ flex: 1, maxWidth: 200 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
-          <Select placeholder="Tất cả" value={selectedKhuVuc} onChange={v => { setSelectedKhuVuc(v); setSelectedNVBH(undefined); }} allowClear showSearch options={cachedKhuVuc.map(v => ({ label: v, value: v }))} style={{ width: '100%' }} />
-        </div>
-        <div style={{ flex: 1, maxWidth: 220 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>NVBH</div>
-          <Select placeholder="Tất cả" value={selectedNVBH} onChange={setSelectedNVBH} allowClear showSearch options={cachedNVBH.filter(n => !selectedKhuVuc || n.TEN_KHUVUC === selectedKhuVuc).map(n => ({ label: n.MA_TEN_NVBH, value: n.MA_TEN_NVBH }))} style={{ width: '100%' }} />
-        </div>
-        <div style={{ width: 120 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Trạng thái</div>
-          <Select placeholder="Tất cả" value={selectedTrangThai} onChange={setSelectedTrangThai} allowClear options={[{ label: 'Chờ duyệt', value: 'Chờ duyệt' }, { label: 'Đã duyệt', value: 'Đã duyệt' }, { label: 'Từ chối', value: 'Từ chối' }, { label: 'Tất cả', value: '' }]} style={{ width: '100%' }} />
-        </div>
-        <div style={{ flex: 1 }}></div>
-        <Button icon={<ReloadOutlined />} onClick={() => fetchData(true)} loading={loading}>Tải lại</Button>
-      </div>
+    return (
+        <Flex vertical gap={12} style={{ height: '100%', overflow: 'hidden' }}>
+            <Flex gap={12} align="end" style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+                <div style={{ flex: 1, maxWidth: 200 }}>
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Khu vực</Text>
+                    <Select placeholder="Tất cả" value={selectedKhuVuc} onChange={v => { setSelectedKhuVuc(v); setSelectedNVBH(undefined); }} allowClear showSearch options={cachedKhuVuc.map(v => ({ label: v, value: v }))} style={{ width: '100%' }} />
+                </div>
+                <div style={{ flex: 1, maxWidth: 220 }}>
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>NVBH</Text>
+                    <Select placeholder="Tất cả" value={selectedNVBH} onChange={setSelectedNVBH} allowClear showSearch options={cachedNVBH.filter(n => !selectedKhuVuc || n.TEN_KHUVUC === selectedKhuVuc).map(n => ({ label: n.MA_TEN_NVBH, value: n.MA_TEN_NVBH }))} style={{ width: '100%' }} />
+                </div>
+                <div style={{ width: 120 }}>
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Trạng thái</Text>
+                    <Select placeholder="Tất cả" value={selectedTrangThai} onChange={setSelectedTrangThai} allowClear options={[{ label: 'Chờ duyệt', value: 'Chờ duyệt' }, { label: 'Đã duyệt', value: 'Đã duyệt' }, { label: 'Từ chối', value: 'Từ chối' }, { label: 'Tất cả', value: '' }]} style={{ width: '100%' }} />
+                </div>
+                <div style={{ flex: 1 }}></div>
+                <Button icon={<ReloadOutlined />} onClick={() => fetchData(true)} loading={loading}>Tải lại</Button>
+            </Flex>
 
       <Spin spinning={loading} classNames={{ root: "flex-1 overflow-hidden" }}>
         <CustomTable
@@ -334,36 +334,36 @@ export default function DuyetChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayU
         />
       </Spin>
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <Button
-          danger
-          icon={<DeleteOutlined />}
-          onClick={handleDelete}
-          disabled={selectedRowKeys.length === 0}
-        >
-          Xóa ({selectedRowKeys.length})
-        </Button>
-        <Button
-          danger
-          type="primary"
-          icon={<CloseCircleOutlined />}
-          onClick={() => handleAction('Reject')}
-          disabled={selectedRowKeys.length === 0}
-          loading={approving}
-        >
-          Từ chối ({selectedRowKeys.length})
-        </Button>
-        <Button
-          type="primary"
-          icon={<CheckCircleOutlined />}
-          onClick={() => handleAction('Approve')}
-          disabled={selectedRowKeys.length === 0}
-          loading={approving}
-          style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-        >
-          Duyệt ({selectedRowKeys.length})
-        </Button>
-      </div>
-    </div>
+            <Flex gap={8} style={{ marginTop: 12 }}>
+                <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={handleDelete}
+                    disabled={selectedRowKeys.length === 0}
+                >
+                    Xóa ({selectedRowKeys.length})
+                </Button>
+                <Button
+                    danger
+                    type="primary"
+                    icon={<CloseCircleOutlined />}
+                    onClick={() => handleAction('Reject')}
+                    disabled={selectedRowKeys.length === 0}
+                    loading={approving}
+                >
+                    Từ chối ({selectedRowKeys.length})
+                </Button>
+                <Button
+                    type="primary"
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => handleAction('Approve')}
+                    disabled={selectedRowKeys.length === 0}
+                    loading={approving}
+                    style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                >
+                    Duyệt ({selectedRowKeys.length})
+                </Button>
+            </Flex>
+        </Flex>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Spin, Tag, Select, Button, Modal, message, Typography, Tooltip } from 'antd';
+import { Spin, Tag, Select, Button, Modal, message, Typography, Tooltip, Flex } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
 import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -78,7 +78,11 @@ export default function DuyetTamNgungModule() {
         }
       }
 
-      const res = await fetch(`/api/khach-hang/tam-ngung?quyen_dl=${encodeURIComponent(quyenQL)}&_t=${Date.now()}`);
+      const res = await fetch('/api/khach-hang/tam-ngung', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quyen_dl: quyenQL })
+      });
       const json = await res.json();
       
       if (json.data) {
@@ -236,23 +240,23 @@ export default function DuyetTamNgungModule() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+    <Flex vertical gap={12} style={{ height: '100%', overflow: 'hidden' }}>
+      <Flex gap={12} align="end" style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ flex: 1, minWidth: 120 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Khu vực</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Khu vực</Text>
           <Select placeholder="Tất cả" value={selectedKhuVuc} onChange={v => { setSelectedKhuVuc(v); setSelectedNVBH(undefined); }} allowClear showSearch options={khuVucOptions} style={{ width: '100%' }} />
         </div>
         <div style={{ flex: 1, minWidth: 120 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>NVBH</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>NVBH</Text>
           <Select placeholder="Tất cả" value={selectedNVBH} onChange={setSelectedNVBH} allowClear showSearch options={nvbhOptions} style={{ width: '100%' }} />
         </div>
         <div style={{ flex: 1, minWidth: 120 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Trạng thái</div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Trạng thái</Text>
           <Select placeholder="Tất cả" value={selectedTrangThai} onChange={setSelectedTrangThai} allowClear options={[{ label: 'Chờ duyệt', value: 'Chờ duyệt' }, { label: 'Đã duyệt', value: 'Đã duyệt' }, { label: 'Từ chối', value: 'Từ chối' }, { label: 'Tất cả', value: '' }]} style={{ width: '100%' }} />
         </div>
         <div style={{ flex: 1 }}></div>
         <Button icon={<ReloadOutlined />} onClick={() => fetchData(true)} loading={loading}>Tải lại</Button>
-      </div>
+      </Flex>
 
       <Spin spinning={loading}>
         <CustomTable
@@ -286,7 +290,7 @@ export default function DuyetTamNgungModule() {
         />
       </Spin>
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+      <Flex gap={8} style={{ marginTop: 12 }}>
         <Button 
           danger 
           icon={<DeleteOutlined />} 
@@ -315,7 +319,7 @@ export default function DuyetTamNgungModule() {
         >
           Duyệt ({selectedRowKeys.length})
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

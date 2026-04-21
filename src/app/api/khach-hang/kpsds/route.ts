@@ -10,14 +10,31 @@ function parseQuyenDL(raw: string): string[] {
 }
 
 export async function GET(req: NextRequest) {
+  return handleFetch(req);
+}
+
+export async function POST(req: NextRequest) {
+  return handleFetch(req);
+}
+
+async function handleFetch(req: NextRequest) {
   try {
-    const quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
+    let quyenDL = '';
+    let checkOnly = false;
+
+    if (req.method === 'POST') {
+      const body = await req.json();
+      quyenDL = body.quyen_dl || '';
+      checkOnly = body.checkOnly === true;
+    } else {
+      quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
+      checkOnly = req.nextUrl.searchParams.get('checkOnly') === 'true';
+    }
+
     const areas = parseQuyenDL(quyenDL);
     if (areas.length === 0) {
       return NextResponse.json({ error: 'Không có quyền dữ liệu' }, { status: 403 });
     }
-
-    const checkOnly = req.nextUrl.searchParams.get('checkOnly') === 'true';
 
     const db = await connectToDB();
 

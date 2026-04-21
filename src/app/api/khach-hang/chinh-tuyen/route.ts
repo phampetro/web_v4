@@ -7,18 +7,37 @@ function parseQuyenDL(raw: string): string[] {
   return raw.split('-').map(s => s.trim()).filter(Boolean);
 }
 
-/**
- * GET - Lấy danh sách đăng ký chỉnh tuyến
- */
 export async function GET(req: NextRequest) {
+  return handleFetch(req);
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
+    const body = await req.json();
+    if (body.rows) {
+      return handleRegister(body);
+    }
+    return handleFetch(req, body);
+  } catch (e) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+}
+
+async function handleFetch(req: NextRequest, body?: any) {
+  try {
+    let quyenDL = '';
+    if (req.method === 'POST' && body) {
+      quyenDL = body.quyen_dl || '';
+    } else {
+      quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
+    }
+
     const areas = parseQuyenDL(quyenDL);
     if (areas.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const db = await connectToDB();
     const request = db.request();
-    
+
     const placeholders = areas.map((area, i) => {
       const p = `area${i}`;
       request.input(p, area);
@@ -37,19 +56,16 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/**
- * POST - Đăng ký chỉnh tuyến
- */
-export async function POST(req: NextRequest) {
+async function handleRegister(body: any) {
   try {
-    const body = await req.json();
     const { rows, nguoi_dang_ky } = body;
+    const db = await connectToDB();
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json({ error: 'Không có dữ liệu' }, { status: 400 });
     }
 
-    const db = await connectToDB();
+
 
     for (const r of rows) {
       const requestCheck = db.request();
@@ -59,7 +75,7 @@ export async function POST(req: NextRequest) {
         WHERE Ma_KH = @ma_kh AND Trang_thai_duyet = N'Chờ duyệt'
         ORDER BY Ngay_dang_ky DESC
       `);
-      
+
       const existingID = checkRes.recordset[0]?.ID;
 
       const request = db.request();

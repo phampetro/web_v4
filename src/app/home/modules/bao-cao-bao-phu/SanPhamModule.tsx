@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
-import { Spin, Typography, Input, Button, Space, Row, Col, message, Modal } from 'antd';
+import { Spin, Typography, Input, Button, Space, Row, Col, message, Modal, Flex } from 'antd';
 import CustomTable from '../../../../components/CustomTable';
 import {
   RightOutlined,
@@ -153,11 +153,11 @@ export default function SanPhamModule() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+    <Flex vertical gap={12} style={{ height: '100%', overflow: 'hidden' }}>
+      <Flex justify="space-between" align="end">
         <Space orientation="vertical" size={0}><Title level={4} style={{ margin: 0 }}>Cấu hình sản phẩm bao phủ</Title><Text type="secondary" style={{ fontSize: 13 }}>Kéo thả để sắp xếp thứ tự hiển thị ưu tiên</Text></Space>
         <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} disabled={loading}>Lưu cấu hình</Button>
-      </div>
+      </Flex>
       <Spin spinning={loading} description={loadingText}>
         <Row gutter={16} style={{ flex: 1 }}>
           <Col span={10} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -181,7 +181,7 @@ export default function SanPhamModule() {
           </Col>
         </Row>
       </Spin>
-      <div style={{ marginTop: 12 }}><Button icon={<ReloadOutlined />} onClick={() => fetchData(true)} loading={loading}>Tải lại</Button></div>
-    </div>
+      <Flex style={{ marginTop: 12 }}><Button icon={<ReloadOutlined />} onClick={() => fetchData(true)} loading={loading}>Tải lại</Button></Flex>
+    </Flex>
   );
 }

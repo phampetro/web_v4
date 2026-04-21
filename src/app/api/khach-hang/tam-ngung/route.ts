@@ -11,12 +11,37 @@ function parseQuyenDL(raw: string): string[] {
  * GET - Lấy danh sách đăng ký tạm ngưng
  */
 export async function GET(req: NextRequest) {
+  return handleFetch(req);
+}
+
+export async function POST(req: NextRequest) {
+  // Phân biệt: Nếu có 'rows' thì là Đăng ký (Logic cũ), nếu không có 'rows' mà có 'quyen_dl' thì là Lấy dữ liệu (Fetch)
   try {
-    const quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
+    const body = await req.json();
+    if (body.rows) {
+      return handleRegister(body);
+    }
+    return handleFetch(req, body);
+  } catch (e) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+}
+
+async function handleFetch(req: NextRequest, body?: any) {
+  try {
+    let quyenDL = '';
+    let checkOnly = false;
+
+    if (req.method === 'POST' && body) {
+      quyenDL = body.quyen_dl || '';
+      checkOnly = body.checkOnly === true;
+    } else {
+      quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
+      checkOnly = req.nextUrl.searchParams.get('checkOnly') === 'true';
+    }
+
     const areas = parseQuyenDL(quyenDL);
     if (areas.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
-    const checkOnly = req.nextUrl.searchParams.get('checkOnly') === 'true';
 
     const db = await connectToDB();
     
@@ -51,18 +76,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/**
- * POST - Đăng ký tạm ngưng KH
- */
-export async function POST(req: NextRequest) {
+async function handleRegister(body: any) {
   try {
-    const body = await req.json();
     const { rows, nguoi_dang_ky } = body;
-
-    if (!rows || !Array.isArray(rows) || rows.length === 0) {
-      return NextResponse.json({ error: 'Không có dữ liệu' }, { status: 400 });
-    }
-
     const db = await connectToDB();
 
     // 1. Kiểm tra tồn tại
