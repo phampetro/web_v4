@@ -100,8 +100,10 @@ export default function XemNhanhModule({ ngayUpdate, setNgayUpdate }: { ngayUpda
           g[key].total++;
           g[key].details[tanSuat] = (g[key].details[tanSuat] || 0) + 1;
           
-          // Kiểm tra khách này có phải là khách Trong chợ không (ưu tiên thuộc tính đi kèm bản ghi, nếu ko có thì tra map)
-          const isTrongCho = (r.TRENDUONG_TRONGCHO === 'Trong chợ') || (choPhoMap[r.Mã_KH] === 'Trong chợ');
+          // Kiểm tra khách này có phải là khách Trong chợ không (so sánh không phân biệt hoa thường và xóa khoảng trắng)
+          const rawVal = r.TRENDUONG_TRONGCHO || choPhoMap[r.Mã_KH?.trim()] || '';
+          const isTrongCho = rawVal.toLowerCase().includes('trong chợ');
+          
           if (isTrongCho) {
             g[key].marketCount++;
           }
