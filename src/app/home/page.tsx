@@ -94,9 +94,9 @@ const menuItems: MenuProps['items'] = [
   {
     key: 'bao-cao-bao-phu',
     icon: <SettingOutlined />,
-    label: 'Báo cáo bao phủ',
+    label: 'Báo cáo tải về',
     children: [
-      { key: 'bao-cao-bao-phu-san-pham', icon: <SettingOutlined />, label: 'Cấu hình sản phẩm' },
+      { key: 'bao-cao-bao-phu-san-pham', icon: <SettingOutlined />, label: 'Báo cáo bao phủ' },
     ],
   },
 ];
@@ -437,9 +437,9 @@ export default function HomePage() {
               alignItems: 'center',
               flexShrink: 0,
             }}>
-              <Dropdown 
-                menu={{ items: userDropdownItems }} 
-                placement="topRight" 
+              <Dropdown
+                menu={{ items: userDropdownItems }}
+                placement="topRight"
                 trigger={['click']}
                 onOpenChange={setUserDropdownOpen}
               >
@@ -456,8 +456,8 @@ export default function HomePage() {
                     <Typography.Text strong style={{ fontSize: 13 }}>
                       {username || 'Người dùng'}
                     </Typography.Text>
-                    <DownOutlined style={{ 
-                      fontSize: 10, 
+                    <DownOutlined style={{
+                      fontSize: 10,
                       color: token.colorTextDescription,
                       transition: 'transform 0.3s',
                       transform: userDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
