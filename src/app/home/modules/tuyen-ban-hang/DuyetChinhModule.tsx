@@ -81,10 +81,10 @@ export default function DuyetChinhModule() {
         }
       }
 
-      const res = await fetch('/api/khach-hang/chinh-tuyen', {
+      const res = await fetch('/api/tuyen-ban-hang/dieu-chinh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quyen_dl: quyenQL })
+        body: JSON.stringify({ quyen_dl: quyenQL, rows: null }) // rows: null indicates fetch
       });
       const json = await res.json();
       if (json.data) setData(json.data);
@@ -136,7 +136,7 @@ export default function DuyetChinhModule() {
             username = userInfo.username || 'Admin';
           }
 
-          const res = await fetch('/api/khach-hang/chinh-tuyen', {
+          const res = await fetch('/api/tuyen-ban-hang/dieu-chinh', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: selectedRowKeys, trang_thai: trangThai, nguoi_duyet: username }),
@@ -175,7 +175,7 @@ export default function DuyetChinhModule() {
       onOk: async () => {
         setDeleting(true);
         try {
-          const res = await fetch('/api/khach-hang/chinh-tuyen', {
+          const res = await fetch('/api/tuyen-ban-hang/dieu-chinh', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: selectedRowKeys }),

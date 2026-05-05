@@ -1,18 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDB } from '@/lib/db';
 import sql from 'mssql';
+import { getAuthUser } from '@/lib/auth-guard';
 
 function parseQuyenDL(raw: string): string[] {
   if (!raw) return [];
   return raw.split('-').map(s => s.trim()).filter(Boolean);
 }
 
-/**
- * GET - Lấy danh sách đăng ký điều chỉnh tuyến (Dùng cho cả Đăng ký & Duyệt)
- */
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const body = await req.json().catch(() => ({}));
+    
+    // Nếu có rows là đăng ký mới
+    if (body.rows) {
+      return handleRegister(body);
+    }
+    
+    // Ngược lại là lấy dữ liệu (Fetch)
+    return handleFetch(body);
+  } catch (error: any) {
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'Lỗi xử lý dữ liệu' }, { status: 400 });
+  }
+}
+
+async function handleFetch(body: any) {
+  try {
+    const quyenDL = body.quyen_dl || '';
     const areas = parseQuyenDL(quyenDL);
     if (areas.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -32,19 +50,16 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: result.recordset });
   } catch (e) {
-    return NextResponse.json({ error: 'DB error', detail: String(e) }, { status: 500 });
+    console.error('Fetch error:', e);
+    return NextResponse.json({ error: 'Lỗi truy vấn dữ liệu' }, { status: 500 });
   }
 }
 
-/**
- * POST - Đăng ký mới hoặc gửi lại yêu cầu điều chỉnh tuyến
- */
-export async function POST(req: NextRequest) {
+async function handleRegister(body: any) {
   try {
-    const body = await req.json();
     const { rows, nguoi_dang_ky } = body;
 
-    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    if (!Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json({ error: 'Không có dữ liệu' }, { status: 400 });
     }
 
@@ -126,7 +141,8 @@ export async function POST(req: NextRequest) {
       updated: resubmitRows.length 
     });
   } catch (e) {
-    return NextResponse.json({ error: 'DB error', detail: String(e) }, { status: 500 });
+    console.error('Register error:', e);
+    return NextResponse.json({ error: 'Lỗi truy vấn dữ liệu' }, { status: 500 });
   }
 }
 
@@ -135,6 +151,9 @@ export async function POST(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+
     const body = await req.json();
     const { ids, trang_thai, nguoi_duyet } = body;
 
@@ -168,7 +187,8 @@ export async function PATCH(req: NextRequest) {
       trang_thai,
     });
   } catch (e) {
-    return NextResponse.json({ error: 'DB error', detail: String(e) }, { status: 500 });
+    console.error('PATCH dieu-chinh error:', e);
+    return NextResponse.json({ error: 'Lỗi truy vấn dữ liệu' }, { status: 500 });
   }
 }
 

@@ -64,7 +64,11 @@ export default function DuyetChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayU
   const fetchData = async (isManual = false) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/khach-hang/cho-pho/approve?_t=${Date.now()}`);
+      const res = await fetch(`/api/khach-hang/cho-pho/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: null }), // empty body means fetch
+      });
       const json = await res.json();
       if (json.data) {
         setData(json.data);

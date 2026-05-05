@@ -1,11 +1,11 @@
 import sql from 'mssql';
 
 const config = {
-  user: 'sa',
-  password: 'Ve$Mau@Trai!Tim',
-  server: '118.69.76.220',
-  port: 2403,
-  database: 'DMS_Report',
+  user: process.env.DB_USER || '',
+  password: process.env.DB_PASSWORD || '',
+  server: process.env.DB_SERVER || '',
+  port: parseInt(process.env.DB_PORT || '1433'),
+  database: process.env.DB_NAME || '',
   options: {
     encrypt: false, // Nếu dùng Azure thì true
     trustServerCertificate: true,

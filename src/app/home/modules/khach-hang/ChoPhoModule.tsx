@@ -130,7 +130,10 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
 
         if (dataJson.data) {
           const map: Record<string, string> = {};
-          dataJson.data.forEach((i: any) => map[i.MA_KH] = i.TRENDUONG_TRONGCHO);
+          dataJson.data.forEach((i: any) => {
+            const key = (i.MA_KH || i.Ma_KH || i.ma_kh || '').toString().trim();
+            if (key) map[key] = i.TRENDUONG_TRONGCHO;
+          });
           setChoPhoMap(map);
 
           await setStoreData(STORE_NAME_CP, dataJson.data);
@@ -143,9 +146,12 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
       return false;
     } catch (err) {
       console.error('Fetch ChoPho error:', err);
-      const cached = await getStoreData<{ MA_KH: string, TRENDUONG_TRONGCHO: string }>(STORE_NAME_CP);
+      const cached = await getStoreData<{ MA_KH: string, Ma_KH?: string, ma_kh?: string, TRENDUONG_TRONGCHO: string }>(STORE_NAME_CP);
       const map: Record<string, string> = {};
-      cached.forEach(i => map[i.MA_KH] = i.TRENDUONG_TRONGCHO);
+      cached.forEach((i: any) => {
+        const key = (i.MA_KH || i.Ma_KH || i.ma_kh || '').toString().trim();
+        if (key) map[key] = i.TRENDUONG_TRONGCHO;
+      });
       setChoPhoMap(map);
       return false;
     } finally {
@@ -157,14 +163,24 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
   const fetchPendingInDB = useCallback(async () => {
     try {
       const localNgayCP = await getCacheMeta(CACHE_KEY_CP);
-      const res = await fetch(`/api/khach-hang/cho-pho/pending?since=${localNgayCP}`);
-      const json = await res.json();
-      if (Array.isArray(json)) {
-        const map: Record<string, { val: string, status: string }> = {};
-        json.forEach((item: any) => {
-          map[item.Ma_KH] = { val: item.Gia_tri_moi, status: item.Trang_thai_duyet };
-        });
-        setPendingInDB(map);
+      const userInfoStr = localStorage.getItem('user_info');
+      if (userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          const username = userInfo.username || '';
+          const res = await fetch(`/api/khach-hang/cho-pho/pending`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ since: localNgayCP, username: username })
+          });
+          const json = await res.json();
+          if (Array.isArray(json)) {
+            const map: Record<string, { val: string, status: string }> = {};
+            json.forEach((item: any) => {
+              const key = (item.Ma_KH || '').toString().trim();
+              if (key) map[key] = { val: item.Gia_tri_moi, status: item.Trang_thai_duyet };
+            });
+            setPendingInDB(map);
+          }
       }
     } catch (e) {
       console.error('Fetch pending error:', e);
@@ -324,7 +340,8 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
         }
 
         // 3. Trường hợp bình thường (lấy từ cache hoặc thay đổi chưa gửi)
-        const currentVal = pendingChanges[r.Mã_KH] !== undefined ? pendingChanges[r.Mã_KH] : (choPhoMap[r.Mã_KH] || '');
+        const maKH = r.Mã_KH.trim();
+        const currentVal = pendingChanges[maKH] !== undefined ? pendingChanges[maKH] : (choPhoMap[maKH] || '');
 
         return (
           <Select
@@ -333,12 +350,13 @@ export default function ChoPhoModule({ ngayUpdate, setNgayUpdate }: { ngayUpdate
             style={{ width: '100%' }}
             size="small"
             onChange={(val) => {
-              setPendingChanges(prev => ({ ...prev, [r.Mã_KH]: val }));
-              const originalVal = choPhoMap[r.Mã_KH] || '';
+              const maKH = r.Mã_KH.trim();
+              setPendingChanges(prev => ({ ...prev, [maKH]: val }));
+              const originalVal = choPhoMap[maKH] || '';
               if (val !== originalVal) {
-                setSelectedRowKeys(prev => prev.includes(r.Mã_KH) ? prev : [...prev, r.Mã_KH]);
+                setSelectedRowKeys(prev => prev.includes(maKH) ? prev : [...prev, maKH]);
               } else {
-                setSelectedRowKeys(prev => prev.filter(k => k !== r.Mã_KH));
+                setSelectedRowKeys(prev => prev.filter(k => k !== maKH));
               }
             }}
             options={[

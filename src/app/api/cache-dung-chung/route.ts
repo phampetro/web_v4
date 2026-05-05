@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDB } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth-guard';
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const username = req.nextUrl.searchParams.get('username');
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+    const authUsername = authResult; // username từ session token
+
+    const body = await req.json().catch(() => ({}));
+    const username = body.username || authUsername;
+
     if (!username) {
       return NextResponse.json({ error: 'Missing username' }, { status: 400 });
     }

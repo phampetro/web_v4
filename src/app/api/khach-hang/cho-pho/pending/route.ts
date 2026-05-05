@@ -1,14 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDB } from '@/lib/db';
 import sql from 'mssql';
+import { getAuthUser } from '@/lib/auth-guard';
 
-export async function GET(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const since = searchParams.get('since'); // Ngày cập nhật của Cache hiện tại
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const body = await req.json().catch(() => ({}));
+    const since = body.since;
 
     const pool = await connectToDB();
-    const req = pool.request();
+    const requestDB = pool.request();
     
     let query = `
       SELECT Ma_KH, Gia_tri_moi, Trang_thai_duyet, Ngay_duyet, Ngay_dang_ky
@@ -18,18 +22,19 @@ export async function GET(request: Request) {
 
     // Lấy thêm các đơn Đã duyệt sau thời điểm Cache được cập nhật
     if (since && since !== 'null') {
-      req.input('since', sql.NVarChar, since);
+      requestDB.input('since', sql.NVarChar, since);
       query += ` OR (Trang_thai_duyet = N'Đã duyệt' AND Ngay_duyet > @since)`;
     } else {
-      // Nếu không có since, mặc định lấy Đã duyệt trong ngày hôm nay
-      query += ` OR (Trang_thai_duyet = N'Đã duyệt' AND CAST(Ngay_duyet AS DATE) = CAST(GETDATE() AS DATE))`;
+      // Nếu không có since, mặc định lấy Đã duyệt trong ngày hôm nay theo UTC+7
+      query += ` OR (Trang_thai_duyet = N'Đã duyệt' AND CAST(Ngay_duyet AS DATE) = CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE))`;
     }
     
-    const result = await req.query(query);
+    const result = await requestDB.query(query);
     
     // Trả về danh sách để Client tự map
     return NextResponse.json(result.recordset);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'Lỗi truy vấn dữ liệu' }, { status: 500 });
   }
 }

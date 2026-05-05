@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
 import { connectToDB } from '@/lib/db';
 import sql from 'mssql';
-import { cookies } from 'next/headers';
+import { getAuthUser } from '@/lib/auth-guard';
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    let username = cookieStore.get('username')?.value || '';
-    
-    const body = await request.json();
-    const { khuVucList, username: clientUsername, checkOnly } = body;
-    const finalUsername = username || clientUsername;
+    const authResult = getAuthUser(request as any);
+    if (authResult instanceof NextResponse) return authResult;
 
-    if (!finalUsername) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const body = await request.json();
+    const { khuVucList, checkOnly } = body;
 
     const pool = await connectToDB();
 
@@ -47,6 +42,6 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('API Cho-Pho Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi xử lý dữ liệu' }, { status: 500 });
   }
 }

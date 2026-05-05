@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDB } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth-guard';
 
 /**
  * Chuẩn hóa Quyen_DL: "Gò Vấp-Quận 12-Quận 3,10, 11" → ['Gò Vấp', 'Quận 12', 'Quận 3,10, 11']
@@ -9,27 +10,17 @@ function parseQuyenDL(raw: string): string[] {
   return raw.split('-').map(s => s.trim()).filter(Boolean);
 }
 
-export async function GET(req: NextRequest) {
-  return handleFetch(req);
-}
-
 export async function POST(req: NextRequest) {
-  return handleFetch(req);
-}
-
-async function handleFetch(req: NextRequest) {
   try {
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+
     let quyenDL = '';
     let checkOnly = false;
 
-    if (req.method === 'POST') {
-      const body = await req.json();
-      quyenDL = body.quyen_dl || '';
-      checkOnly = body.checkOnly === true;
-    } else {
-      quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
-      checkOnly = req.nextUrl.searchParams.get('checkOnly') === 'true';
-    }
+    const body = await req.json().catch(() => ({}));
+    quyenDL = body.quyen_dl || '';
+    checkOnly = body.checkOnly === true;
 
     const areas = parseQuyenDL(quyenDL);
     if (areas.length === 0) {
@@ -60,7 +51,7 @@ async function handleFetch(req: NextRequest) {
 
     return NextResponse.json({ data: result.recordset, ngayUpdate: serverNgayUpdate });
   } catch (e) {
-    return NextResponse.json({ error: 'DB error', detail: String(e) }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi truy vấn dữ liệu' }, { status: 500 });
   }
 }
 

@@ -57,7 +57,7 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                     quyenQL = userInfo.quyenDL || '';
                 }
             }
-            const res = await fetch('/api/khach-hang/chinh-tuyen', {
+            const res = await fetch('/api/tuyen-ban-hang/dieu-chinh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quyen_dl: quyenQL })
@@ -353,7 +353,7 @@ export default function DieuChinhModule({ ngayUpdate, setNgayUpdate }: { ngayUpd
                         username = userInfo.username || 'User';
                     }
 
-                    const res = await fetch('/api/khach-hang/chinh-tuyen', {
+                    const res = await fetch('/api/tuyen-ban-hang/dieu-chinh', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ rows: rowsToSend, nguoi_dang_ky: username }),

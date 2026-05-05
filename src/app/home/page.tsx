@@ -140,7 +140,11 @@ export default function HomePage() {
 
     setNgayUpdateLoading(true);
     try {
-      const res = await fetch(`/api/cache-dung-chung?username=${encodeURIComponent(targetUser)}`);
+      const res = await fetch('/api/cache-dung-chung', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: targetUser }),
+      });
       if (!res.ok) throw new Error('API Error');
       const data = await res.json();
 

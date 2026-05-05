@@ -1,44 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDB } from '@/lib/db';
 import sql from 'mssql';
+import { getAuthUser } from '@/lib/auth-guard';
 
 function parseQuyenDL(raw: string): string[] {
   if (!raw) return [];
   return raw.split('-').map(s => s.trim()).filter(Boolean);
 }
 
-/**
- * GET - Lấy danh sách đăng ký tạm ngưng
- */
-export async function GET(req: NextRequest) {
-  return handleFetch(req);
-}
-
 export async function POST(req: NextRequest) {
-  // Phân biệt: Nếu có 'rows' thì là Đăng ký (Logic cũ), nếu không có 'rows' mà có 'quyen_dl' thì là Lấy dữ liệu (Fetch)
   try {
-    const body = await req.json();
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const body = await req.json().catch(() => ({}));
     if (body.rows) {
       return handleRegister(body);
     }
-    return handleFetch(req, body);
+    return handleFetch(body);
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 }
 
-async function handleFetch(req: NextRequest, body?: any) {
+async function handleFetch(body: any) {
   try {
-    let quyenDL = '';
-    let checkOnly = false;
-
-    if (req.method === 'POST' && body) {
-      quyenDL = body.quyen_dl || '';
-      checkOnly = body.checkOnly === true;
-    } else {
-      quyenDL = req.nextUrl.searchParams.get('quyen_dl') || '';
-      checkOnly = req.nextUrl.searchParams.get('checkOnly') === 'true';
-    }
+    const quyenDL = body.quyen_dl || '';
+    const checkOnly = body.checkOnly === true;
 
     const areas = parseQuyenDL(quyenDL);
     if (areas.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -162,6 +150,9 @@ async function handleRegister(body: any) {
  */
 export async function PATCH(req: NextRequest) {
   try {
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+
     const body = await req.json();
     const { ids, trang_thai, nguoi_duyet } = body;
 
@@ -196,7 +187,7 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (e) {
     console.error('PATCH tam-ngung error:', e);
-    return NextResponse.json({ error: 'DB error', detail: String(e) }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi truy vấn dữ liệu' }, { status: 500 });
   }
 }
 
@@ -205,6 +196,9 @@ export async function PATCH(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
+    const authResult = getAuthUser(req);
+    if (authResult instanceof NextResponse) return authResult;
+
     const body = await req.json();
     const { ids } = body;
 
@@ -235,7 +229,7 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (e) {
     console.error('DELETE tam-ngung error:', e);
-    return NextResponse.json({ error: 'DB error', detail: String(e) }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi truy vấn dữ liệu' }, { status: 500 });
   }
 }
 
